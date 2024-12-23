@@ -1,6 +1,5 @@
 { pkgs, lib, config, inputs, ... }:
 
-
 let
   isLinux = pkgs.stdenv.isLinux;
   isDarwin = pkgs.stdenv.isDarwin;
