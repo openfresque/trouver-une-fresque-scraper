@@ -1,5 +1,10 @@
 { pkgs, lib, config, inputs, ... }:
 
+
+let
+  isLinux = pkgs.stdenv.isLinux;
+  isDarwin = pkgs.stdenv.isDarwin;
+in
 {
   # https://github.com/cachix/devenv/issues/1264#issuecomment-2368362686
   packages = (with pkgs; [
@@ -12,7 +17,7 @@
 
   env.WEBDRIVER_PATH = "${pkgs.geckodriver}/bin/geckodriver";
 
-  env.LD_LIBRARY_PATH = lib.mkIf pkgs.stdenv.isLinux (
+  env.LD_LIBRARY_PATH = lib.mkIf (isLinux || isDarwin) (
     lib.makeLibraryPath (with pkgs; [
       libz
       gcc-unwrapped.lib
