@@ -1,8 +1,8 @@
 import time
 import re
 import json
-from datetime import datetime
 
+from datetime import datetime
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.common.by import By
@@ -15,41 +15,14 @@ from utils.keywords import *
 from utils.location import get_address
 
 
-def get_glide_data(service, options):
+def get_glide_data(sources, service, options):
     print("Scraping data from glide.page")
 
     driver = webdriver.Firefox(service=service, options=options)
 
-    webSites = [
-        {
-            # Fresque des Frontières Planétaires (ateliers)
-            "url": "https://1erdegre.glide.page/dl/3b1bc8",
-            "id": 500,
-            "filter": "Fresque des frontières planétaires",
-        },
-        {
-            # Fresque des Frontières Planétaires (formations)
-            "url": "https://1erdegre.glide.page/dl/dcc150",
-            "id": 500,
-            "filter": "Fresque des frontières planétaires",
-        },
-        {
-            # Horizons Décarbonés (ateliers)
-            "url": "https://1erdegre.glide.page/dl/3b1bc8",
-            "id": 501,
-            "filter": "Horizons Décarbonés",
-        },
-        {
-            # Horizons Décarbonés (formations)
-            "url": "https://1erdegre.glide.page/dl/dcc150",
-            "id": 501,
-            "filter": "Horizons Décarbonés",
-        },
-    ]
-
     records = []
 
-    for page in webSites:
+    for page in sources:
         print(f"==================\nProcessing page {page}")
         driver.get(page["url"])
         driver.implicitly_wait(10)

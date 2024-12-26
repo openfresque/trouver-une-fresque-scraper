@@ -9,17 +9,14 @@ from utils.errors import FreskError
 from utils.location import get_address
 
 
-def get_glorieuses_data():
+def get_glorieuses_data(source):
     print("Getting data from Glorieuses API")
-
-    url = "https://hook.eu1.make.com/koqwhb0igq5air3aysx58rsjeld1uacl"
-    type_id = 600
 
     json_records = []
     records = []
 
     try:
-        response = requests.get(url)
+        response = requests.get(source["url"])
         # Check if the request was successful (status code 200)
         if response.status_code == 200:
             json_records = response.json()
@@ -138,8 +135,8 @@ def get_glorieuses_data():
         # Building final object
         ################################################################
         record = get_record_dict(
-            f"{type_id}-{event_id}",
-            type_id,
+            f"{source["id"]}-{event_id}",
+            source["id"],
             title,
             event_start_datetime,
             event_end_datetime,

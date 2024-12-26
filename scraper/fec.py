@@ -114,21 +114,14 @@ def scroll_to_bottom(driver):
             break
 
 
-def get_fec_data(service, options):
+def get_fec_data(sources, service, options):
     print("Scraping data from lafresquedeleconomiecirculaire.com")
 
     driver = webdriver.Firefox(service=service, options=options)
 
-    webSites = [
-        {
-            "url": "https://www.lafresquedeleconomiecirculaire.com/",
-            "id": 300,
-        },
-    ]
-
     records = []
 
-    for page in webSites:
+    for page in sources:
         print("========================")
         driver.get(page["url"])
         driver.implicitly_wait(2)

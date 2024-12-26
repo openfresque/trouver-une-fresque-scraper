@@ -15,134 +15,15 @@ from utils.keywords import *
 from utils.location import get_address
 
 
-def get_billetweb_data(service, options):
+def get_billetweb_data(sources, service, options):
     print("Scraping data from www.billetweb.fr")
 
     driver = webdriver.Firefox(service=service, options=options)
     wait = WebDriverWait(driver, 10)
 
-    webSites = [
-        {
-            # Fresque des Nouveaux Récits
-            "url": "https://www.billetweb.fr/pro/fdnr",
-            "iframe": "event21569",
-            "id": 0,
-        },
-        {
-            # Fresque Océane
-            "url": "https://www.billetweb.fr/pro/billetteriefo",
-            "iframe": "event15247",
-            "id": 1,
-        },
-        {
-            # Fresque de la Biodiversité
-            "url": "https://www.billetweb.fr/multi_event.php?user=82762",
-            "iframe": "event17309",
-            "id": 2,
-        },
-        {
-            # Fresque du Numérique
-            "url": "https://www.billetweb.fr/multi_event.php?user=84999",
-            "iframe": "eventu84999",
-            "id": 3,
-        },
-        {
-            # Fresque Agri'Alim
-            "url": "https://www.billetweb.fr/pro/fresqueagrialim",
-            "iframe": "event11421",
-            "id": 4,
-        },
-        {
-            # Fresque de l'Alimentation
-            "url": "https://www.billetweb.fr/pro/fresquealimentation",
-            "iframe": "event11155",
-            "id": 5,
-        },
-        {
-            # Fresque de la Construction
-            "url": "https://www.billetweb.fr/pro/fresquedelaconstruction",
-            "iframe": "event11574",
-            "id": 6,
-        },
-        {
-            # Fresque de la Mobilité
-            "url": "https://www.billetweb.fr/pro/fresquedelamobilite",
-            "iframe": "event11698",
-            "id": 7,
-        },
-        {
-            # Fresque du Sexisme
-            "url": "https://www.billetweb.fr/pro/fresque-du-sexisme",
-            "iframe": "event27112",
-            "id": 8,
-        },
-        {
-            # Atelier OGRE
-            "url": "https://www.billetweb.fr/pro/atelierogre",
-            "iframe": "event13026",
-            "id": 9,
-        },
-        {
-            # Atelier Nos vies bas carbone
-            "url": "https://www.billetweb.fr/multi_event.php?user=132897",
-            "iframe": "event22230",
-            "id": 10,
-        },
-        {
-            # Fresque de l'Eau
-            "url": "https://www.billetweb.fr/multi_event.php?user=138110",
-            "iframe": "eventu138110",
-            "id": 11,
-        },
-        {
-            # futurs proches
-            "url": "https://www.billetweb.fr/pro/futursproches",
-            "iframe": "event14893",
-            "id": 12,
-        },
-        {
-            # Fresque de la Diversité
-            "url": "https://www.billetweb.fr/multi_event.php?user=168799",
-            "iframe": "event38362",
-            "id": 13,
-        },
-        {
-            # Fresque du Textile
-            "url": "https://www.billetweb.fr/multi_event.php?user=166793",
-            "iframe": "event27458",
-            "filter": "textile",
-            "id": 14,
-        },
-        {
-            # Fresque des Déchets
-            "url": "https://www.billetweb.fr/multi_event.php?user=166793",
-            "iframe": "event27458",
-            "filter": "dechet",
-            "id": 15,
-        },
-        {
-            # Puzzle Climat
-            "url": "https://www.billetweb.fr/multi_event.php?user=121600",
-            "iframe": "event21038",
-            "id": 16,
-        },
-        {
-            # Fresque de la Finance
-            "url": "https://www.billetweb.fr/pro/fresquedelafinance",
-            "iframe": "event34683",
-            "id": 17,
-        },
-        {
-            # Fresque de la RSE
-            "url": "https://www.billetweb.fr/pro/fresque",
-            "iframe": "event35904",
-            "id": 18,
-        },
-    ]
-
     records = []
 
-    for page in webSites:
+    for page in sources:
         print(f"==================\nProcessing page {page}")
         driver.get(page["url"])
         wait.until(EC.frame_to_be_available_and_switch_to_it((By.ID, page["iframe"])))

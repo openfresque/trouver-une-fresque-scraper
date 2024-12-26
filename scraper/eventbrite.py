@@ -128,37 +128,14 @@ def scroll_to_bottom(driver):
             more_content = False
 
 
-def get_eventbrite_data(service, options):
+def get_eventbrite_data(sources, service, options):
     print("Scraping data from eventbrite.fr")
 
     driver = webdriver.Firefox(service=service, options=options)
 
-    webSites = [
-        {
-            # 2tonnes
-            "url": "https://www.eventbrite.fr/o/2-tonnes-29470123869",
-            "id": 100,
-        },
-        {
-            # Atelier Compte-Gouttes
-            "url": "https://www.eventbrite.com/o/atelier-compte-gouttes-73003088333",
-            "id": 101,
-        },
-        {
-            # Fresque du Bénévolat
-            "url": "https://www.eventbrite.fr/o/jeveuxaidergouvfr-77010082313",
-            "id": 102,
-        },
-        {
-            # Fresque du Plastique
-            "url": "https://www.eventbrite.fr/o/la-fresque-du-plastique-45763194553",
-            "id": 103,
-        },
-    ]
-
     records = []
 
-    for page in webSites:
+    for page in sources:
         print(f"==================\nProcessing page {page}")
         driver.get(page["url"])
         driver.implicitly_wait(5)

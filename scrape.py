@@ -1,15 +1,56 @@
 import argparse
+import json
+import logging
 import pandas as pd
 import psycopg
 
 from datetime import datetime
+from pathlib import Path
 from psycopg.conninfo import make_conninfo
 
 from apis import main as main_apis
 from scraper import main as main_scraper
 
+
+def get_sources(content):
+    try:
+        data = json.loads(content)
+    except json.JSONDecodeError as e:
+        logging.error(f"Failed to decode JSON: {e}")
+        raise
+    except Exception as e:
+        logging.error(f"An unexpected error occurred: {e}")
+        raise
+
+    # Validate the data structure
+    for d in data:
+        if not isinstance(d, dict):
+            logging.error(f"Invalid data structure: expected a dictionary, got {type(d).__name__}")
+            raise
+
+        required_keys = ["name", "id", "url", "type"]
+        for key in required_keys:
+            if key not in d:
+                logging.error(f"Missing required key '{key}' in data: {d}")
+                raise
+
+    scrapers, apis = [], []
+    for d in data:
+        if d["type"] == "scraper":
+            scrapers.append(d)
+        elif d["type"] == "api":
+            apis.append(d)
+
+    return scrapers, apis
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--country",
+        default="fr",
+        help="run the scraper for the given json containing data sources",
+    )
     parser.add_argument(
         "--headless",
         action="store_true",
@@ -24,8 +65,21 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    df1 = main_scraper(headless=args.headless)
-    df2 = main_apis()
+    # Validate the source file
+    source_path = Path(f"countries/{args.country}.json")
+    try:
+        with open(source_path, "r") as file:
+            content = file.read()
+    except FileNotFoundError:
+        print(f"Source file {source_path} does not exist.")
+        raise
+
+    # Parse the sources
+    scrapers, apis = get_sources(content)
+
+    # Launch the scraper
+    df1 = main_scraper(scrapers, headless=args.headless)
+    df2 = main_apis(apis)
     df_merged = pd.concat([df1, df2])
 
     dt = datetime.now()
@@ -33,6 +87,7 @@ if __name__ == "__main__":
     with open(f"results/events_{insert_time}.json", "w", encoding="UTF-8") as file:
         df_merged.to_json(file, orient="records", force_ascii=False, indent=2)
 
+    # Push the resulting json file to the database
     if args.push_to_db:
         print("Pushing scraped results into db...")
         credentials = get_config()

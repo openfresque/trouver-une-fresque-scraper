@@ -14,7 +14,7 @@ workshop_types = {
     7: "FresqueMobilite",
     8: "FresqueSexisme",
     9: "OGRE",
-    10: "AtelierNosViesBasCarbone",
+    10: "AtelierInventonsNosViesBasCarbone",
     11: "FresqueDeLeau",
     12: "FutursProches",
     13: "FresqueDiversite",

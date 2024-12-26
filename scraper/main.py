@@ -11,6 +11,15 @@ from selenium.webdriver.firefox.options import Options as FirefoxOptions
 from selenium.webdriver.firefox.service import Service
 from utils.utils import get_config
 
+SCRAPER_FNS = {
+    "billetweb.fr": get_billetweb_data,
+    "eventbrite.fr": get_eventbrite_data,
+    "fresqueduclimat.org": get_fdc_data,
+    "lafresquedeleconomiecirculaire.com": get_fec_data,
+    "1erdegre.glide.page": get_glide_data,
+    "helloasso.com": get_helloasso_data,
+}
+
 
 def get_webdriver_executable():
     webdriver = get_config("webdriver")
@@ -21,7 +30,7 @@ def get_webdriver_executable():
     return webdriver
 
 
-def main(headless=False):
+def main(scrapers, headless=False):
     records = []
 
     service = Service(executable_path=get_webdriver_executable())
@@ -30,12 +39,19 @@ def main(headless=False):
     if headless:
         options.add_argument("-headless")
 
-    records += get_helloasso_data(service=service, options=options)
-    records += get_glide_data(service=service, options=options)
-    records += get_eventbrite_data(service=service, options=options)
-    records += get_fdc_data(service=service, options=options)
-    records += get_billetweb_data(service=service, options=options)
-    records += get_fec_data(service=service, options=options)
+    sorted_workshops = {}
+
+    # Make sure that we have a scraper available for each fresk entry
+    for sourcek in SCRAPER_FNS:
+        for workshop in scrapers:
+            if sourcek in workshop["url"]:
+                # Organize fresks by keys in SCRAPER_FNS
+                if sourcek not in sorted_workshops:
+                    sorted_workshops[sourcek] = []
+                sorted_workshops[sourcek].append(workshop)
+
+    for sourcek, sourcev in sorted_workshops.items():
+        records += SCRAPER_FNS[sourcek](sourcev, service=service, options=options)
 
     return pd.DataFrame(records)
 

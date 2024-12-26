@@ -122,42 +122,14 @@ def scroll_to_bottom(driver):
             break
 
 
-def get_helloasso_data(service, options):
+def get_helloasso_data(sources, service, options):
     print("Scraping data from helloasso.com")
 
     driver = webdriver.Firefox(service=service, options=options)
 
-    webSites = [
-        {
-            # Fresque de la Rénovation
-            "url": "https://www.helloasso.com/associations/fresque-de-la-renovation",
-            "id": 700,
-        },
-        {
-            # Fresque de l'Energie
-            "url": "https://www.helloasso.com/associations/la-fresque-de-l-energie",
-            "id": 701,
-        },
-        {
-            # Fresque des Possibles
-            "url": "https://www.helloasso.com/associations/le-lieu-dit",
-            "id": 702,
-        },
-        {
-            # Fresque de la Communication
-            "url": "https://www.helloasso.com/associations/la-fresque-de-la-communication",
-            "id": 703,
-        },
-        {
-            # Zoofresque
-            "url": "https://www.helloasso.com/associations/ajas-association-justice-animaux-savoie",
-            "id": 704,
-        },
-    ]
-
     records = []
 
-    for page in webSites:
+    for page in sources:
         print(f"==================\nProcessing page {page}")
         driver.get(page["url"])
         driver.implicitly_wait(5)

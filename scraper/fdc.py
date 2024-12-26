@@ -15,27 +15,14 @@ from utils.keywords import *
 from utils.location import get_address
 
 
-def get_fdc_data(service, options):
+def get_fdc_data(sources, service, options):
     print("Scraping data from fresqueduclimat.org")
 
     driver = webdriver.Firefox(service=service, options=options)
 
-    webSites = [
-        {
-            # Fresque du Climat (ateliers)
-            "url": "https://fresqueduclimat.org/inscription-atelier/grand-public/",
-            "id": 200,
-        },
-        {
-            # Fresque du Climat (formations)
-            "url": "https://fresqueduclimat.org/inscription-formation/grand-public/",
-            "id": 200,
-        },
-    ]
-
     records = []
 
-    for page in webSites:
+    for page in sources:
         print("========================")
         driver.get(page["url"])
         driver.implicitly_wait(2)
