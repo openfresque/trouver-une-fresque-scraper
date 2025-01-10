@@ -129,7 +129,7 @@ def get_glide_data(sources, service, options):
                     "décembre": 12,
                 }
 
-                year = 2024
+                year = 2025
                 year_pattern = r"\b\d{4}\b"
                 year_match = re.search(year_pattern, event_time)
                 if year_match:

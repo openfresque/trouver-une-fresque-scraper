@@ -49,7 +49,7 @@ def extract_dates(driver):
     if len(day_string) == 2:
         day = day_string[0]
         month_string = day_string[1]
-        year = 2024
+        year = 2025
     elif len(day_string) == 3:
         day = day_string[0]
         month_string = day_string[1]
