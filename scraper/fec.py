@@ -58,10 +58,14 @@ def extract_dates(driver):
         raise FreskDateBadFormat(event_time)
 
     times_and_timezone = date_and_times[1].split(" UTC")
-    times = times_and_timezone[0].split(" – ")
     if len(times_and_timezone) >= 2:
-        _ = times_and_timezone[1]
-        raise FreskDateDifferentTimezone(event_time)
+        if not times_and_timezone[1] in (
+            "+1",
+            "+2",
+        ):
+            raise FreskDateDifferentTimezone(event_time)
+
+    times = times_and_timezone[0].split(" – ")
 
     try:
         # Extract hours and minutes from time strings
