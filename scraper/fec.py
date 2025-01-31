@@ -135,7 +135,7 @@ def get_fec_data(sources, service, options):
         driver.execute_script("window.scrollTo(0, 0);")
 
         ele = driver.find_elements(
-            By.CSS_SELECTOR, 'li[data-hook="events-card"] div[data-hook="title"] a'
+            By.CSS_SELECTOR, 'li[data-hook="events-card"] a[data-hook="title"]'
         )
         links = [e.get_attribute("href") for e in ele]
 
