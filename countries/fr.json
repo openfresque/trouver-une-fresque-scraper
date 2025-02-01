@@ -159,6 +159,12 @@
         "id": 103
     },
     {
+        "name": "Cyber Fresque",
+        "url": "https://www.eventbrite.fr/o/senscyb-89802295343",
+        "type": "scraper",
+        "id": 104
+    },
+    {
         "name": "Fresque du Climat (ateliers)",
         "url": "https://fresqueduclimat.org/inscription-atelier/grand-public/",
         "type": "scraper",
