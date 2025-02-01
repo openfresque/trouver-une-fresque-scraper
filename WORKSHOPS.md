@@ -39,6 +39,7 @@ Développer et maintenir Trouver une Fresque nous prend beaucoup de temps et d'�
 | Atelier Compte-Gouttes | https://www.eventbrite.com/o/atelier-compte-gouttes-73003088333 | Scraping Eventbrite | OK |
 | Fresque du Bénévolat | https://www.eventbrite.fr/o/jeveuxaidergouvfr-77010082313 | Scraping Eventbrite | OK |
 | Fresque du Plastique | https://www.eventbrite.fr/o/la-fresque-du-plastique-45763194553 | Scraping Eventbrite | OK |
+| Cyber Fresque | https://www.eventbrite.fr/o/senscyb-89802295343 | Scraping Eventbrite | OK |
 | Pitch Climat | https://www.billetweb.fr/multi_event.php?user=186116 | Scraping Billetweb | Prévu, priorité 1 |
 | Fresque de l'Environnement | | API | Prévu, priorité 1 |
 | Fresque du Sol | https://fresquedusol.com/comment-participer/dates-a-venir/ | Calendrier ICS | Prévu, priorité 2 |
