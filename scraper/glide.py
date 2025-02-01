@@ -2,7 +2,6 @@ import time
 import re
 import json
 
-from datetime import datetime
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.common.by import By
@@ -10,6 +9,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 from db.records import get_record_dict
+from utils.date_and_time import get_dates
 from utils.errors import FreskError
 from utils.keywords import *
 from utils.location import get_address
@@ -114,67 +114,12 @@ def get_glide_data(sources, service, options):
                 event_time_el = parent_el.find_element(by=By.XPATH, value="./*[2]")
                 event_time = event_time_el.text.lower()
 
-                month_mapping = {
-                    "janvier": 1,
-                    "février": 2,
-                    "mars": 3,
-                    "avril": 4,
-                    "mai": 5,
-                    "juin": 6,
-                    "juillet": 7,
-                    "août": 8,
-                    "septembre": 9,
-                    "octobre": 10,
-                    "novembre": 11,
-                    "décembre": 12,
-                }
-
-                year = 2025
-                year_pattern = r"\b\d{4}\b"
-                year_match = re.search(year_pattern, event_time)
-                if year_match:
-                    year = year_match.group()
-                    event_time = re.sub(f" {year_pattern}", "", event_time)
-
-                date_and_times = event_time.split(" de ")
                 try:
-                    _, day, month_string = date_and_times[0].split(" ")
-                except ValueError:
-                    print("Rejecting record: error while parsing the event date")
+                    event_start_datetime, event_end_datetime = get_dates(event_time)
+                except Exception as e:
+                    print(f"Rejecting record: {e}")
                     driver.back()
                     continue
-
-                # Define a regular expression pattern to extract times
-                time_pattern = r"(\d{1,2}h\d{2}) à (\d{1,2}h\d{2})"
-
-                # Find matches using the pattern
-                matches = re.findall(time_pattern, date_and_times[1])
-                if matches:
-                    start_time, end_time = matches[0]
-                else:
-                    print("Rejecting record: bad format in dates")
-                    driver.back()
-                    continue
-
-                # Extract hours and minutes from time strings
-                start_hour, start_minute = map(int, start_time.split("h"))
-                end_hour, end_minute = map(int, end_time.split("h"))
-
-                # Construct the datetime objects
-                event_start_datetime = datetime(
-                    int(year),
-                    month_mapping[month_string],
-                    int(day),
-                    start_hour,
-                    start_minute,
-                )
-                event_end_datetime = datetime(
-                    int(year),
-                    month_mapping[month_string],
-                    int(day),
-                    end_hour,
-                    end_minute,
-                )
 
                 ################################################################
                 # Is it an online event?

@@ -3,7 +3,6 @@ import time
 import json
 import re
 
-from datetime import datetime
 from selenium import webdriver
 from selenium.common.exceptions import (
     StaleElementReferenceException,
@@ -15,6 +14,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 from db.records import get_record_dict
+from utils.date_and_time import get_dates
 from utils.errors import FreskError, FreskDateBadFormat, FreskDateNotFound
 from utils.keywords import *
 from utils.location import get_address
@@ -34,60 +34,6 @@ def delete_cookies_overlay(driver):
         driver.execute_script(script, transcend_element)
     except Exception as e:
         print(f"Transcend consent manager element couldn't be removed: {e}")
-
-
-def extract_dates(driver):
-    try:
-        date_info_el = driver.find_element(
-            by=By.CSS_SELECTOR,
-            value="span.date-info__full-datetime",
-        )
-        event_time = date_info_el.text
-    except NoSuchElementException:
-        raise FreskDateNotFound
-
-    months = {
-        "janv.": 1,
-        "févr.": 2,
-        "mars": 3,
-        "avr.": 4,
-        "mai": 5,
-        "juin": 6,
-        "juil.": 7,
-        "août": 8,
-        "sept.": 9,
-        "oct.": 10,
-        "nov.": 11,
-        "déc.": 12,
-    }
-
-    try:
-        parts = event_time.split()
-        day = int(parts[1])
-        month = months[parts[2]]
-        year = int(parts[3])
-        start_time = parts[4]
-        end_time = parts[6]
-
-        # Convert time strings to datetime objects
-        event_start_datetime = datetime(
-            year,
-            month,
-            day,
-            int(start_time.split(":")[0]),
-            int(start_time.split(":")[1]),
-        )
-        event_end_datetime = datetime(
-            year,
-            month,
-            day,
-            int(end_time.split(":")[0]),
-            int(end_time.split(":")[1]),
-        )
-
-        return event_start_datetime, event_end_datetime
-    except Exception:
-        raise FreskDateBadFormat(event_time)
 
 
 def scroll_to_bottom(driver):
@@ -318,8 +264,17 @@ def get_eventbrite_data(sources, service, options):
                         # Dates
                         ################################################################
                         try:
-                            event_start_datetime, event_end_datetime = extract_dates(driver)
-                        except FreskError as error:
+                            date_info_el = driver.find_element(
+                                by=By.CSS_SELECTOR,
+                                value="span.date-info__full-datetime",
+                            )
+                            event_time = date_info_el.text
+                        except NoSuchElementException:
+                            raise FreskDateNotFound
+
+                        try:
+                            event_start_datetime, event_end_datetime = get_dates(event_time)
+                        except FreskDateBadFormat as error:
                             print(f"Reject record: {error}")
                             continue
 
@@ -353,7 +308,17 @@ def get_eventbrite_data(sources, service, options):
                 # Dates
                 ################################################################
                 try:
-                    event_start_datetime, event_end_datetime = extract_dates(driver)
+                    date_info_el = driver.find_element(
+                        by=By.CSS_SELECTOR,
+                        value="span.date-info__full-datetime",
+                    )
+                    event_time = date_info_el.text
+                except NoSuchElementException as error:
+                    print(f"Reject record: {error}")
+                    continue
+
+                try:
+                    event_start_datetime, event_end_datetime = get_dates(event_time)
                 except FreskDateBadFormat as error:
                     print(f"Reject record: {error}")
                     continue

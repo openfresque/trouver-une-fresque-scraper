@@ -2,7 +2,6 @@ import json
 import re
 import time
 
-from datetime import datetime
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.common.by import By
@@ -10,91 +9,10 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 from db.records import get_record_dict
+from utils.date_and_time import get_dates
 from utils.errors import FreskError, FreskDateNotFound, FreskDateBadFormat
 from utils.keywords import *
 from utils.location import get_address
-
-
-def extract_dates(driver):
-    try:
-        date_info_el = driver.find_element(
-            by=By.CSS_SELECTOR,
-            value="span.CampaignHeader--Date",
-        )
-        event_time = date_info_el.text
-    except NoSuchElementException:
-        raise FreskDateNotFound
-
-    month_mapping = {
-        "janvier": 1,
-        "février": 2,
-        "mars": 3,
-        "avril": 4,
-        "mai": 5,
-        "juin": 6,
-        "juillet": 7,
-        "août": 8,
-        "septembre": 9,
-        "octobre": 10,
-        "novembre": 11,
-        "décembre": 12,
-    }
-
-    # Expected date format is Le 17 juillet 2025, de 18h à 20h30
-    date_and_times = event_time.split(",")
-    day_string = date_and_times[0].replace("Le ", "")
-    day_string = day_string.split(" ")
-
-    if len(day_string) == 2:
-        day = day_string[0]
-        month_string = day_string[1]
-        year = 2025
-    elif len(day_string) == 3:
-        day = day_string[0]
-        month_string = day_string[1]
-        year = day_string[2]
-    else:
-        raise FreskDateBadFormat(event_time)
-
-    # Define a regular expression pattern to extract times
-    time_pattern = r"(\d{1,2}h\d{0,2}) à (\d{1,2}h\d{0,2})"
-
-    # Find matches using the pattern
-    matches = re.findall(time_pattern, date_and_times[1])
-    if matches:
-        start_time, end_time = matches[0]
-    else:
-        raise FreskDateBadFormat(event_time)
-
-    try:
-        # Extract hours and minutes from time strings
-        start_parts = [part for part in start_time.split("h") if part]
-        start_hour = int(start_parts[0])
-        start_minute = int(start_parts[1]) if len(start_parts) > 1 else 0
-
-        end_parts = [part for part in end_time.split("h") if part]
-        end_hour = int(end_parts[0])
-        end_minute = int(end_parts[1]) if len(end_parts) > 1 else 0
-
-        # Construct the datetime objects
-        event_start_datetime = datetime(
-            int(year),
-            month_mapping[month_string],
-            int(day),
-            start_hour,
-            start_minute,
-        )
-        event_end_datetime = datetime(
-            int(year),
-            month_mapping[month_string],
-            int(day),
-            end_hour,
-            end_minute,
-        )
-
-        return event_start_datetime, event_end_datetime
-    except Exception:
-        raise FreskDateBadFormat(event_time)
 
 
 def scroll_to_bottom(driver):
@@ -184,9 +102,19 @@ def get_helloasso_data(sources, service, options):
             # Parse start and end dates
             ################################################################
             try:
-                event_start_datetime, event_end_datetime = extract_dates(driver)
-            except FreskError as error:
+                date_info_el = driver.find_element(
+                    by=By.CSS_SELECTOR,
+                    value="span.CampaignHeader--Date",
+                )
+                event_time = date_info_el.text
+            except NoSuchElementException as error:
                 print(f"Reject record: {error}")
+                continue
+
+            try:
+                event_start_datetime, event_end_datetime = get_dates(event_time)
+            except Exception as e:
+                print(f"Rejecting record: {e}")
                 continue
 
             ################################################################

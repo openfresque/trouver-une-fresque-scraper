@@ -1,7 +1,6 @@
 import json
 import time
 
-from datetime import datetime
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.common.by import By
@@ -9,6 +8,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 from db.records import get_record_dict
+from utils.date_and_time import get_dates
 from utils.errors import (
     FreskError,
     FreskDateBadFormat,
@@ -17,80 +17,6 @@ from utils.errors import (
 )
 from utils.keywords import *
 from utils.location import get_address
-
-
-def extract_dates(driver):
-    try:
-        date_info_el = driver.find_element(
-            by=By.CSS_SELECTOR,
-            value='p[data-hook="event-full-date"]',
-        )
-        event_time = date_info_el.text
-    except NoSuchElementException:
-        raise FreskDateNotFound
-
-    month_mapping = {
-        "janv.": 1,
-        "févr.": 2,
-        "mars": 3,
-        "avr.": 4,
-        "mai": 5,
-        "juin": 6,
-        "juil.": 7,
-        "août": 8,
-        "sept.": 9,
-        "oct.": 10,
-        "nov.": 11,
-        "déc.": 12,
-    }
-
-    date_and_times = event_time.split(",")
-    day_string = date_and_times[0].split(" ")
-    if len(day_string) == 2:
-        day = day_string[0]
-        month_string = day_string[1]
-        year = 2025
-    elif len(day_string) == 3:
-        day = day_string[0]
-        month_string = day_string[1]
-        year = day_string[2]
-    else:
-        raise FreskDateBadFormat(event_time)
-
-    times_and_timezone = date_and_times[1].split(" UTC")
-    if len(times_and_timezone) >= 2:
-        if not times_and_timezone[1] in (
-            "+1",
-            "+2",
-        ):
-            raise FreskDateDifferentTimezone(event_time)
-
-    times = times_and_timezone[0].split(" – ")
-
-    try:
-        # Extract hours and minutes from time strings
-        start_hour, start_minute = map(int, times[0].split(":"))
-        end_hour, end_minute = map(int, times[1].split(":"))
-
-        # Construct the datetime objects
-        event_start_datetime = datetime(
-            int(year),
-            month_mapping[month_string],
-            int(day),
-            start_hour,
-            start_minute,
-        )
-        event_end_datetime = datetime(
-            int(year),
-            month_mapping[month_string],
-            int(day),
-            end_hour,
-            end_minute,
-        )
-
-        return event_start_datetime, event_end_datetime
-    except Exception:
-        raise FreskDateBadFormat(event_time)
 
 
 def scroll_to_bottom(driver):
@@ -170,8 +96,17 @@ def get_fec_data(sources, service, options):
             # Parse start and end dates
             ################################################################
             try:
-                event_start_datetime, event_end_datetime = extract_dates(driver)
-            except FreskError as error:
+                date_info_el = driver.find_element(
+                    by=By.CSS_SELECTOR,
+                    value='p[data-hook="event-full-date"]',
+                )
+                event_time = date_info_el.text
+            except NoSuchElementException:
+                raise FreskDateNotFound
+
+            try:
+                event_start_datetime, event_end_datetime = get_dates(event_time)
+            except FreskDateBadFormat as error:
                 print(f"Reject record: {error}")
                 continue
 

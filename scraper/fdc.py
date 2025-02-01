@@ -2,7 +2,6 @@ import json
 import re
 import time
 
-from datetime import datetime
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.common.by import By
@@ -10,7 +9,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 from db.records import get_record_dict
-from utils.errors import FreskError
+from utils.date_and_time import get_dates
+from utils.errors import FreskError, FreskDateBadFormat
 from utils.keywords import *
 from utils.location import get_address
 
@@ -72,59 +72,15 @@ def get_fdc_data(sources, service, options):
                 parent_div = clock_icon.find_element(By.XPATH, "..")
                 event_time = parent_div.text
 
-                month_mapping = {
-                    "janvier": 1,
-                    "février": 2,
-                    "mars": 3,
-                    "avril": 4,
-                    "mai": 5,
-                    "juin": 6,
-                    "juillet": 7,
-                    "août": 8,
-                    "septembre": 9,
-                    "octobre": 10,
-                    "novembre": 11,
-                    "décembre": 12,
-                }
-
-                date_and_times = event_time.split(",")
-                day, month_string, year = date_and_times[0].split(" ")
-                times = date_and_times[1].split(" de ")[1]
-
-                # Define a regular expression pattern to extract times
-                time_pattern = r"(\d{1,2}h\d{2}) à (\d{1,2}h\d{2})"
-
-                # Find matches using the pattern
-                matches = re.findall(time_pattern, times)
-                if matches:
-                    start_time, end_time = matches[0]
-                else:
-                    print("Rejecting record: bad format in dates")
+                try:
+                    event_start_datetime, event_end_datetime = get_dates(event_time)
+                except FreskDateBadFormat as error:
+                    print(f"Reject record: {error}")
                     driver.back()
                     wait = WebDriverWait(driver, 10)
                     iframe = wait.until(EC.presence_of_element_located((By.TAG_NAME, "iframe")))
                     driver.switch_to.frame(iframe)
                     continue
-
-                # Extract hours and minutes from time strings
-                start_hour, start_minute = map(int, start_time.split("h"))
-                end_hour, end_minute = map(int, end_time.split("h"))
-
-                # Construct the datetime objects
-                event_start_datetime = datetime(
-                    int(year),
-                    month_mapping[month_string],
-                    int(day),
-                    start_hour,
-                    start_minute,
-                )
-                event_end_datetime = datetime(
-                    int(year),
-                    month_mapping[month_string],
-                    int(day),
-                    end_hour,
-                    end_minute,
-                )
 
                 ################################################################
                 # Is it an online event?

@@ -2,7 +2,6 @@ import re
 import json
 from datetime import timedelta
 
-from dateutil.parser import parse
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
@@ -10,6 +9,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 from db.records import get_record_dict
+from utils.date_and_time import get_dates
 from utils.errors import FreskError
 from utils.keywords import *
 from utils.location import get_address
@@ -209,29 +209,13 @@ def get_billetweb_data(sources, service, options):
                     print("Rejecting record: gift card")
                     continue
 
-                if match := re.match(
-                    r"(?P<date>.*)\sfrom\s(?P<start>.*)\sto\s(?P<end>.*)", event_time
-                ):
-                    # Thu Oct 19, 2023 from 01:00 PM to 02:00 PM
-                    event_start_datetime = parse(f"{match.group('date')} {match.group('start')}")
-                    event_end_datetime = parse(f"{match.group('date')} {match.group('end')}")
-                elif match := re.match(
-                    r"(?P<start_date>.*)\sat\s(?P<start_time>.*)\sto\s(?P<end_date>.*)\sat\s(?P<end_time>.*)",
-                    event_time,
-                ):
-                    # Thu Oct 19, 2023 at 01:00 PM to Sat Feb 24, 2024 at 02:00 PM
-                    event_start_datetime = parse(
-                        f"{match.group('start_date')} {match.group('start_time')}"
-                    )
-                    event_end_datetime = parse(
-                        f"{match.group('end_date')} {match.group('end_time')}"
-                    )
-                elif match := re.match(r"(?P<date>.*)\sat\s(?P<time>.*)", event_time):
-                    # Thu Oct 19, 2023 at 01:00 PM
-                    event_start_datetime = parse(f"{match.group('date')} {match.group('time')}")
-                    event_end_datetime = event_start_datetime + timedelta(hours=3)
-                else:
-                    print(f"Rejecting record: invalid dates: {event_time}")
+                ################################################################
+                # Date and time
+                ################################################################
+                try:
+                    event_start_datetime, event_end_datetime = get_dates(event_time)
+                except Exception as e:
+                    print(f"Rejecting record: {e}")
                     continue
 
                 if event_end_datetime - event_start_datetime > timedelta(days=1):
