@@ -1,3 +1,5 @@
+import logging
+
 from utils.errors import *
 
 from geopy.geocoders import Nominatim
@@ -116,60 +118,62 @@ def get_address(full_location):
     This function requests Nomatim to get structured location data from an
     input string.
     """
-    if not full_location:
-        raise FreskAddressNotFound("")
-
-    if full_location in cache:
-        location = cache[full_location]
-    else:
-        location = geolocator.geocode(full_location, addressdetails=True)
-        cache[full_location] = location
-
-    if location is None:
-        raise FreskAddressNotFound(full_location)
-
-    address = location.raw["address"]
-
-    if address["country_code"] != "fr":
-        raise FreskCountryNotSupported(address, full_location)
-
-    house_number = ""
-    if "house_number" in address.keys():
-        house_number = f"{address['house_number']} "
-
-    road = ""
-    if "road" in address.keys():
-        road = address["road"]
-    elif "square" in address.keys():
-        road = address["square"]
-    else:
-        raise FreskAddressBadFormat(address, full_location, "road")
-
-    city = None
-    if "city" in address.keys():
-        city = address["city"]
-    elif "town" in address.keys():
-        city = address["town"]
-    elif "village" in address.keys():
-        city = address["village"]
-    else:
-        raise FreskAddressBadFormat(address, full_location, "city")
-
-    department = None
-    if "state_district" in address.keys():
-        department = address["state_district"]
-    elif "county" in address.keys():
-        department = address["county"]
-    elif "city_district" in address.keys():
-        department = address["city_district"]
-    elif "state" in address.keys():
-        department = address["state"]
-    else:
-        raise FreskAddressBadFormat(address, full_location, "department")
-
     try:
+        if not full_location:
+            raise FreskAddressNotFound("")
+
+        if full_location in cache:
+            location = cache[full_location]
+        else:
+            location = geolocator.geocode(full_location, addressdetails=True)
+            cache[full_location] = location
+
+        if location is None:
+            raise FreskAddressNotFound(full_location)
+
+        address = location.raw["address"]
+
+        if address["country_code"] != "fr":
+            raise FreskCountryNotSupported(address, full_location)
+
+        house_number = ""
+        if "house_number" in address.keys():
+            house_number = f"{address['house_number']} "
+
+        road = ""
+        if "road" in address.keys():
+            road = address["road"]
+        elif "square" in address.keys():
+            road = address["square"]
+        else:
+            raise FreskAddressBadFormat(address, full_location, "road")
+
+        city = None
+        if "city" in address.keys():
+            city = address["city"]
+        elif "town" in address.keys():
+            city = address["town"]
+        elif "village" in address.keys():
+            city = address["village"]
+        else:
+            raise FreskAddressBadFormat(address, full_location, "city")
+
+        department = None
+        if "state_district" in address.keys():
+            department = address["state_district"]
+        elif "county" in address.keys():
+            department = address["county"]
+        elif "city_district" in address.keys():
+            department = address["city_district"]
+        elif "state" in address.keys():
+            department = address["state"]
+        else:
+            raise FreskAddressBadFormat(address, full_location, "department")
+
         num_department = department_to_num(department)
-    except FreskError:
+
+    except FreskError as e:
+        logging.error(f"get_address: {e}")
         raise
 
     return {

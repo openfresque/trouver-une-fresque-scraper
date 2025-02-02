@@ -77,6 +77,20 @@ if __name__ == "__main__":
     # Parse the sources
     scrapers, apis = get_sources(content)
 
+    # Build the results path for this run
+    dt = datetime.now()
+    scraping_time = dt.strftime("%Y%m%d_%H%M%S")
+    results_path = Path(f"results/{args.country}/{scraping_time}")
+    results_path.mkdir(parents=True, exist_ok=True)
+
+    # Error logging
+    errors_path = results_path / Path(f"error_log.txt")
+    logging.basicConfig(
+        filename=errors_path,
+        level=logging.ERROR,
+        format="%(asctime)s - %(levelname)s - %(message)s",
+    )
+
     # Launch the scraper
     df1 = main_scraper(scrapers, headless=args.headless)
     df2 = main_apis(apis)
@@ -84,7 +98,7 @@ if __name__ == "__main__":
 
     dt = datetime.now()
     insert_time = dt.strftime("%Y%m%d_%H%M%S")
-    with open(f"results/events_{insert_time}.json", "w", encoding="UTF-8") as file:
+    with open(results_path / Path(f"events_{insert_time}.json"), "w", encoding="UTF-8") as file:
         df_merged.to_json(file, orient="records", force_ascii=False, indent=2)
 
     # Push the resulting json file to the database
