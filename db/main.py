@@ -47,7 +47,7 @@ def main():
         input_records = open(args.input, "r")
         input_records = json.loads(input_records.read())
         df = pd.DataFrame.from_dict(pd.json_normalize(input_records), orient="columns")
-        print(df)
+        logging.info(df)
 
         if args.full_etl:
             etl(conn, df)

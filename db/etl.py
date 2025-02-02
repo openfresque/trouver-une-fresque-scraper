@@ -23,12 +23,12 @@ def update_most_recent(conn, table):
     WHERE S."id" = M."id" AND S."workshop_type" = M."workshop_type" AND S."scrape_date" = M.max_scrape_date AND S."start_date" < current_timestamp;
     """
     cursor = conn.cursor()
-    print(query)
+    logging.info(query)
     try:
         cursor.execute(query)
         conn.commit()
     except (Exception, psycopg.DatabaseError) as error:
-        print("Error: %s" % error)
+        logging.info("Error: %s" % error)
         conn.rollback()
         cursor.close()
         return 1
@@ -40,7 +40,7 @@ def insert(conn, df, table, most_recent=False):
     tuples = [tuple(x) for x in df.to_numpy()]
     cols = ",".join(list(df.columns))
 
-    print(list(df.columns))
+    logging.info(list(df.columns))
 
     # SQL query to execute
     cursor = conn.cursor()
@@ -53,7 +53,7 @@ def insert(conn, df, table, most_recent=False):
         )
         conn.commit()
     except (Exception, psycopg.DatabaseError) as error:
-        print("Error: %s" % error)
+        logging.info("Error: %s" % error)
         conn.rollback()
         cursor.close()
         return 1
@@ -67,7 +67,7 @@ def truncate(conn, table):
         cursor.execute(query)
         conn.commit()
     except (Exception, psycopg.DatabaseError) as error:
-        print("Error: %s" % error)
+        logging.info("Error: %s" % error)
         conn.rollback()
         cursor.close()
         return 1

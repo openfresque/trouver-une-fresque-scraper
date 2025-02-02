@@ -1,5 +1,6 @@
 import re
 import json
+import logging
 from datetime import timedelta
 
 from selenium import webdriver
@@ -16,7 +17,7 @@ from utils.location import get_address
 
 
 def get_billetweb_data(sources, service, options):
-    print("Scraping data from www.billetweb.fr")
+    logging.info("Scraping data from www.billetweb.fr")
 
     driver = webdriver.Firefox(service=service, options=options)
     wait = WebDriverWait(driver, 10)
@@ -24,7 +25,7 @@ def get_billetweb_data(sources, service, options):
     records = []
 
     for page in sources:
-        print(f"==================\nProcessing page {page}")
+        logging.info(f"==================\nProcessing page {page}")
         driver.get(page["url"])
         wait.until(EC.frame_to_be_available_and_switch_to_it((By.ID, page["iframe"])))
         wait.until(lambda driver: driver.execute_script("return document.readyState") == "complete")
@@ -32,7 +33,7 @@ def get_billetweb_data(sources, service, options):
         links = [e.get_attribute("href") for e in ele]
 
         for link in links:
-            print(f"------------------\nProcessing event {link}")
+            logging.info(f"------------------\nProcessing event {link}")
             driver.get(link)
             wait.until(
                 lambda driver: driver.execute_script("return document.readyState") == "complete"
@@ -41,7 +42,9 @@ def get_billetweb_data(sources, service, options):
             # Useful for different workshops sharing same event link
             if "filter" in page:
                 if page["filter"] not in link:
-                    print("Rejecting filter: expected filter keyword not present in current link")
+                    logging.info(
+                        "Rejecting filter: expected filter keyword not present in current link"
+                    )
                     continue
 
             # Description
@@ -53,13 +56,13 @@ def get_billetweb_data(sources, service, options):
             try:
                 description = driver.find_element(by=By.CSS_SELECTOR, value="#description").text
             except Exception:
-                print("Rejecting record: no description")
+                logging.info("Rejecting record: no description")
                 continue
 
             # Parse event id
             event_id = re.search(r"/([^/]+?)&", link).group(1)
             if not event_id:
-                print("Rejecting record: event_id not found")
+                logging.info("Rejecting record: event_id not found")
                 continue
 
             # Parse main title
@@ -204,9 +207,11 @@ def get_billetweb_data(sources, service, options):
             for index, (title, event_time, full_location, sold_out, ticket_link, uuid) in enumerate(
                 event_info
             ):
-                print(f"\n-> Processing session {index+1}/{len(event_info)} {ticket_link} ...")
+                logging.info(
+                    f"\n-> Processing session {index+1}/{len(event_info)} {ticket_link} ..."
+                )
                 if is_gift_card(title):
-                    print("Rejecting record: gift card")
+                    logging.info("Rejecting record: gift card")
                     continue
 
                 ################################################################
@@ -215,11 +220,11 @@ def get_billetweb_data(sources, service, options):
                 try:
                     event_start_datetime, event_end_datetime = get_dates(event_time)
                 except Exception as e:
-                    print(f"Rejecting record: {e}")
+                    logging.info(f"Rejecting record: {e}")
                     continue
 
                 if event_end_datetime - event_start_datetime > timedelta(days=1):
-                    print(f"Rejecting record: event is too long: {event_time}")
+                    logging.info(f"Rejecting record: event is too long: {event_time}")
                     continue
 
                 # Is it an online event?
@@ -243,7 +248,7 @@ def get_billetweb_data(sources, service, options):
                             longitude,
                         ) = address_dict.values()
                     except FreskError as error:
-                        print(f"Rejecting record: {error}.")
+                        logging.info(f"Rejecting record: {error}.")
                         continue
 
                 # Training?
@@ -276,7 +281,7 @@ def get_billetweb_data(sources, service, options):
                     description,
                 )
                 records.append(record)
-                print(f"Successfully scraped:\n{json.dumps(record, indent=4)}")
+                logging.info(f"Successfully scraped:\n{json.dumps(record, indent=4)}")
 
     driver.quit()
 

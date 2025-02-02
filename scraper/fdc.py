@@ -16,14 +16,14 @@ from utils.location import get_address
 
 
 def get_fdc_data(sources, service, options):
-    print("Scraping data from fresqueduclimat.org")
+    logging.info("Scraping data from fresqueduclimat.org")
 
     driver = webdriver.Firefox(service=service, options=options)
 
     records = []
 
     for page in sources:
-        print("========================")
+        logging.info("========================")
         driver.get(page["url"])
         driver.implicitly_wait(2)
 
@@ -36,7 +36,7 @@ def get_fdc_data(sources, service, options):
             links = [e.get_attribute("href") for e in ele]
 
             for link in links:
-                print(f"\n-> Processing {link} ...")
+                logging.info(f"\n-> Processing {link} ...")
                 driver.get(link)
                 driver.implicitly_wait(3)
 
@@ -49,7 +49,7 @@ def get_fdc_data(sources, service, options):
                 )
                 uuids = re.findall(uuid_pattern, link)
                 if not uuids:
-                    print("Rejecting record: UUID not found")
+                    logging.info("Rejecting record: UUID not found")
                     driver.back()
                     wait = WebDriverWait(driver, 10)
                     iframe = wait.until(EC.presence_of_element_located((By.TAG_NAME, "iframe")))
@@ -75,7 +75,7 @@ def get_fdc_data(sources, service, options):
                 try:
                     event_start_datetime, event_end_datetime = get_dates(event_time)
                 except FreskDateBadFormat as error:
-                    print(f"Reject record: {error}")
+                    logging.info(f"Reject record: {error}")
                     driver.back()
                     wait = WebDriverWait(driver, 10)
                     iframe = wait.until(EC.presence_of_element_located((By.TAG_NAME, "iframe")))
@@ -120,7 +120,7 @@ def get_fdc_data(sources, service, options):
                             longitude,
                         ) = address_dict.values()
                     except FreskError as error:
-                        print(f"Rejecting record: {error}.")
+                        logging.info(f"Rejecting record: {error}.")
                         driver.back()
                         wait = WebDriverWait(driver, 10)
                         iframe = wait.until(EC.presence_of_element_located((By.TAG_NAME, "iframe")))
@@ -187,7 +187,7 @@ def get_fdc_data(sources, service, options):
                 )
 
                 records.append(record)
-                print(f"Successfully scraped {link}\n{json.dumps(record, indent=4)}")
+                logging.info(f"Successfully scraped {link}\n{json.dumps(record, indent=4)}")
 
                 driver.back()
                 wait = WebDriverWait(driver, 10)

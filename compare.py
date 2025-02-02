@@ -45,10 +45,10 @@ def get_json(file_path):
         with open(file_path, "r", encoding="utf-8") as file:
             return json.load(file)
     except FileNotFoundError:
-        print(f"File not found: {file_path}")
+        logging.info(f"File not found: {file_path}")
         return 0
     except json.JSONDecodeError:
-        print(f"Error decoding JSON in file: {file_path}")
+        logging.info(f"Error decoding JSON in file: {file_path}")
         return 0
 
 
@@ -64,8 +64,8 @@ def count_workshop_types(data):
 
 def display_workshop_types(counts):
     for workshop_type, count in counts.items():
-        print(f"{workshop_types[workshop_type]}: {count} events")
-    print("---------")
+        logging.info(f"{workshop_types[workshop_type]}: {count} events")
+    logging.info("---------")
 
 
 def display_table_workshop_types(counts1, counts2):
@@ -80,7 +80,7 @@ def display_table_workshop_types(counts1, counts2):
 def main():
     # Check if the correct number of arguments is provided
     if len(sys.argv) != 3:
-        print("Usage: python program.py <file1_path> <file2_path>")
+        logging.info("Usage: python program.py <file1_path> <file2_path>")
         sys.exit(1)
 
     # Get file paths from command-line arguments
@@ -102,7 +102,7 @@ def main():
     totals1 = sum(row[1] for row in table)
     totals2 = sum(row[2] for row in table)
     table.append(["====Totals====", totals1, totals2, totals2 - totals1])
-    print(tabulate(table, headers, tablefmt="fancy_grid"))
+    logging.info(tabulate(table, headers, tablefmt="fancy_grid"))
 
 
 if __name__ == "__main__":

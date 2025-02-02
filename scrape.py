@@ -12,6 +12,43 @@ from apis import main as main_apis
 from scraper import main as main_scraper
 
 
+def configure_logging(log_file_path, error_log_file_path):
+    """
+    Configures the logging system to write all levels of messages to both a file and the console,
+    and errors to a separate file.
+
+    :param log_file_path: The path to the log file for all levels of messages.
+    :param error_log_file_path: The path to the log file for error messages only.
+    """
+    # Ensure the directories exist
+    log_file_path.parent.mkdir(parents=True, exist_ok=True)
+    error_log_file_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Create a logger
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+
+    # Create a file handler for all levels of messages
+    file_handler = logging.FileHandler(log_file_path)
+    file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
+
+    # Create a stream handler for all levels of messages
+    stream_handler = logging.StreamHandler()
+    stream_handler.setLevel(logging.INFO)
+    stream_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
+
+    # Create a file handler for error messages only
+    error_file_handler = logging.FileHandler(error_log_file_path)
+    error_file_handler.setLevel(logging.ERROR)
+    error_file_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
+
+    # Add handlers to the logger
+    logger.addHandler(file_handler)
+    logger.addHandler(stream_handler)
+    logger.addHandler(error_file_handler)
+
+
 def get_sources(content):
     try:
         data = json.loads(content)
@@ -71,7 +108,7 @@ if __name__ == "__main__":
         with open(source_path, "r") as file:
             content = file.read()
     except FileNotFoundError:
-        print(f"Source file {source_path} does not exist.")
+        logging.info(f"Source file {source_path} does not exist.")
         raise
 
     # Parse the sources
@@ -83,13 +120,10 @@ if __name__ == "__main__":
     results_path = Path(f"results/{args.country}/{scraping_time}")
     results_path.mkdir(parents=True, exist_ok=True)
 
-    # Error logging
+    # Logging
+    log_path = results_path / Path(f"log.txt")
     errors_path = results_path / Path(f"error_log.txt")
-    logging.basicConfig(
-        filename=errors_path,
-        level=logging.ERROR,
-        format="%(asctime)s - %(levelname)s - %(message)s",
-    )
+    configure_logging(log_path, errors_path)
 
     # Launch the scraper
     df1 = main_scraper(scrapers, headless=args.headless)
@@ -103,7 +137,7 @@ if __name__ == "__main__":
 
     # Push the resulting json file to the database
     if args.push_to_db:
-        print("Pushing scraped results into db...")
+        logging.info("Pushing scraped results into db...")
         credentials = get_config()
         host = credentials["host"]
         port = credentials["port"]
@@ -116,4 +150,4 @@ if __name__ == "__main__":
         ) as conn:
             etl(conn, df_merged)
 
-        print("Done")
+        logging.info("Done")

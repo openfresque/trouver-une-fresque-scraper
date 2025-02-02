@@ -10,7 +10,7 @@ from utils.location import get_address
 
 
 def get_glorieuses_data(source):
-    print("Getting data from Glorieuses API")
+    logging.info("Getting data from Glorieuses API")
 
     json_records = []
     records = []
@@ -21,13 +21,13 @@ def get_glorieuses_data(source):
         if response.status_code == 200:
             json_records = response.json()
         else:
-            print(f"Request failed with status code: {response.status_code}")
+            logging.info(f"Request failed with status code: {response.status_code}")
     except requests.RequestException as e:
-        print(f"An error occurred: {e}")
+        logging.info(f"An error occurred: {e}")
 
     for json_record in json_records:
         time.sleep(1.5)
-        print("")
+        logging.info("")
 
         ################################################################
         # Get event id
@@ -48,7 +48,7 @@ def get_glorieuses_data(source):
             # Convert time strings to datetime objects
             event_start_datetime = datetime.strptime(event_start_time, "%Y-%m-%dT%H:%M:%S.%fZ")
         except Exception as e:
-            print(f"Rejecting record: bad date format {e}")
+            logging.info(f"Rejecting record: bad date format {e}")
             continue
 
         event_end_time = json_record["Date fin"]
@@ -57,7 +57,7 @@ def get_glorieuses_data(source):
             # Convert time strings to datetime objects
             event_end_datetime = datetime.strptime(event_end_time, "%Y-%m-%dT%H:%M:%S.%fZ")
         except Exception as e:
-            print(f"Rejecting record: bad date format {e}")
+            logging.info(f"Rejecting record: bad date format {e}")
             continue
 
         ###########################################################
@@ -80,7 +80,7 @@ def get_glorieuses_data(source):
         if not online:
             address = json_record["Adresse"]
             if not address:
-                print("Rejecting record: no address provided")
+                logging.info("Rejecting record: no address provided")
                 continue
 
             city = json_record["Ville"]
@@ -98,10 +98,10 @@ def get_glorieuses_data(source):
                     longitude,
                 ) = address_dict.values()
             except json.JSONDecodeError:
-                print("Rejecting record: error while parsing the national address API response")
+                logging.info("Rejecting record: error while parsing API response")
                 continue
             except FreskError as error:
-                print(f"Rejecting record: {error}.")
+                logging.info(f"Rejecting record: {error}.")
                 continue
 
         ################################################################
@@ -135,7 +135,7 @@ def get_glorieuses_data(source):
         # Building final object
         ################################################################
         record = get_record_dict(
-            f"{source["id"]}-{event_id}",
+            f"{source['id']}-{event_id}",
             source["id"],
             title,
             event_start_datetime,
@@ -158,6 +158,6 @@ def get_glorieuses_data(source):
         )
 
         records.append(record)
-        print(f"Successfully API record\n{json.dumps(record, indent=4)}")
+        logging.info(f"Successfully API record\n{json.dumps(record, indent=4)}")
 
     return records

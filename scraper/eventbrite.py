@@ -33,13 +33,13 @@ def delete_cookies_overlay(driver):
         """
         driver.execute_script(script, transcend_element)
     except Exception as e:
-        print(f"Transcend consent manager element couldn't be removed: {e}")
+        logging.info(f"Transcend consent manager element couldn't be removed: {e}")
 
 
 def scroll_to_bottom(driver):
     more_content = True
     while more_content:
-        print("Scrolling to the bottom...")
+        logging.info("Scrolling to the bottom...")
         try:
             driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
             time.sleep(5)  # Give the page some time to load new content
@@ -75,14 +75,14 @@ def scroll_to_bottom(driver):
 
 
 def get_eventbrite_data(sources, service, options):
-    print("Scraping data from eventbrite.fr")
+    logging.info("Scraping data from eventbrite.fr")
 
     driver = webdriver.Firefox(service=service, options=options)
 
     records = []
 
     for page in sources:
-        print(f"==================\nProcessing page {page}")
+        logging.info(f"==================\nProcessing page {page}")
         driver.get(page["url"])
         driver.implicitly_wait(5)
 
@@ -96,7 +96,7 @@ def get_eventbrite_data(sources, service, options):
         )
         event_card_divs = future_events.find_elements(By.CSS_SELECTOR, "div.event-card")
 
-        print(f"Found {len(event_card_divs)} events")
+        logging.info(f"Found {len(event_card_divs)} events")
 
         for event_card_div in event_card_divs:
             link_elements = event_card_div.find_elements(By.CSS_SELECTOR, "a.event-card-link")
@@ -110,7 +110,7 @@ def get_eventbrite_data(sources, service, options):
         links = np.unique(links)
 
         for link in links:
-            print(f"\n-> Processing {link} ...")
+            logging.info(f"\n-> Processing {link} ...")
             driver.get(link)
             delete_cookies_overlay(driver)
             driver.implicitly_wait(3)
@@ -126,13 +126,13 @@ def get_eventbrite_data(sources, service, options):
                 # If the element has children elements, it is enabled
                 try:
                     if badge.find_elements(By.XPATH, "./*"):
-                        print("Rejecting record: event expired")
+                        logging.info("Rejecting record: event expired")
                         continue
                 except StaleElementReferenceException:
                     if driver.find_element(
                         By.XPATH, '//div[@data-testid="enhancedExpiredEventsBadge"]'
                     ).find_elements(By.XPATH, "./*"):
-                        print("Rejecting record: event expired")
+                        logging.info("Rejecting record: event expired")
                         continue
 
             except NoSuchElementException:
@@ -140,7 +140,7 @@ def get_eventbrite_data(sources, service, options):
 
             try:
                 badge = driver.find_element(By.CSS_SELECTOR, "div.enhanced-expired-badge")
-                print("Rejecting record: event expired")
+                logging.info("Rejecting record: event expired")
                 continue
             except NoSuchElementException:
                 pass
@@ -159,7 +159,7 @@ def get_eventbrite_data(sources, service, options):
             if sold_out:
                 # We reject sold out events as the Eventbrite UX hides
                 # relevant info in this case (which looks like an awful practice)
-                print("Rejecting record: sold out")
+                logging.info("Rejecting record: sold out")
                 continue
 
             ################################################################
@@ -172,7 +172,7 @@ def get_eventbrite_data(sources, service, options):
             title = title_el.text
 
             if is_plenary(title):
-                print("Rejecting record: plénière")
+                logging.info("Rejecting record: plénière")
                 continue
 
             ###########################################################
@@ -216,7 +216,7 @@ def get_eventbrite_data(sources, service, options):
                         longitude,
                     ) = address_dict.values()
                 except FreskError as error:
-                    print(f"Rejecting record: {error}.")
+                    logging.info(f"Rejecting record: {error}.")
                     continue
 
             ################################################################
@@ -226,7 +226,7 @@ def get_eventbrite_data(sources, service, options):
                 description_title_el = driver.find_element(By.CSS_SELECTOR, "div.eds-text--left")
                 description = description_title_el.text
             except NoSuchElementException:
-                print("Rejecting record: Description not found.")
+                logging.info("Rejecting record: Description not found.")
                 continue
 
             ################################################################
@@ -275,7 +275,7 @@ def get_eventbrite_data(sources, service, options):
                         try:
                             event_start_datetime, event_end_datetime = get_dates(event_time)
                         except FreskDateBadFormat as error:
-                            print(f"Reject record: {error}")
+                            logging.info(f"Reject record: {error}")
                             continue
 
                         ################################################################
@@ -314,13 +314,13 @@ def get_eventbrite_data(sources, service, options):
                     )
                     event_time = date_info_el.text
                 except NoSuchElementException as error:
-                    print(f"Reject record: {error}")
+                    logging.info(f"Reject record: {error}")
                     continue
 
                 try:
                     event_start_datetime, event_end_datetime = get_dates(event_time)
                 except FreskDateBadFormat as error:
-                    print(f"Reject record: {error}")
+                    logging.info(f"Reject record: {error}")
                     continue
 
                 ################################################################
@@ -364,7 +364,7 @@ def get_eventbrite_data(sources, service, options):
                     description,
                 )
                 records.append(record)
-                print(f"Successfully scraped {link}\n{json.dumps(record, indent=4)}")
+                logging.info(f"Successfully scraped {link}\n{json.dumps(record, indent=4)}")
 
     driver.quit()
 

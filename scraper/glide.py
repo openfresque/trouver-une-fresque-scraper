@@ -16,14 +16,14 @@ from utils.location import get_address
 
 
 def get_glide_data(sources, service, options):
-    print("Scraping data from glide.page")
+    logging.info("Scraping data from glide.page")
 
     driver = webdriver.Firefox(service=service, options=options)
 
     records = []
 
     for page in sources:
-        print(f"==================\nProcessing page {page}")
+        logging.info(f"==================\nProcessing page {page}")
         driver.get(page["url"])
         driver.implicitly_wait(10)
         time.sleep(20)
@@ -41,7 +41,7 @@ def get_glide_data(sources, service, options):
                 By.XPATH, "//div[contains(@class, 'collection-item') and @role='button']"
             )
             num_el = len(ele)
-            print(f"Found {num_el} elements")
+            logging.info(f"Found {num_el} elements")
 
             for i in range(num_el):
                 time.sleep(5)
@@ -71,7 +71,7 @@ def get_glide_data(sources, service, options):
 
                 time.sleep(5)
                 link = driver.current_url
-                print(f"\n-> Processing {link} ...")
+                logging.info(f"\n-> Processing {link} ...")
                 driver.implicitly_wait(3)
 
                 ################################################################
@@ -82,7 +82,7 @@ def get_glide_data(sources, service, options):
                     large_title_el = driver.find_element(By.CSS_SELECTOR, "h2.headlineMedium")
                     large_title = large_title_el.text
                     if is_canceled(large_title):
-                        print("Rejecting record: canceled")
+                        logging.info("Rejecting record: canceled")
                         driver.back()
                         continue
                 except NoSuchElementException:
@@ -93,7 +93,7 @@ def get_glide_data(sources, service, options):
                 ################################################################
                 uuid = link.split("/")[-1]
                 if not uuid:
-                    print("Rejecting record: UUID not found")
+                    logging.info("Rejecting record: UUID not found")
                     driver.back()
                     continue
 
@@ -117,7 +117,7 @@ def get_glide_data(sources, service, options):
                 try:
                     event_start_datetime, event_end_datetime = get_dates(event_time)
                 except Exception as e:
-                    print(f"Rejecting record: {e}")
+                    logging.info(f"Rejecting record: {e}")
                     driver.back()
                     continue
 
@@ -153,7 +153,7 @@ def get_glide_data(sources, service, options):
                         parent_el = address_label_el.find_element(by=By.XPATH, value="..")
                         address_el = parent_el.find_element(by=By.XPATH, value="./*[2]")
                     except Exception:
-                        print("Rejecting record: empty address")
+                        logging.info("Rejecting record: empty address")
                         driver.back()
                         continue
 
@@ -171,7 +171,7 @@ def get_glide_data(sources, service, options):
                             longitude,
                         ) = address_dict.values()
                     except FreskError as error:
-                        print(f"Rejecting record: {error}.")
+                        logging.info(f"Rejecting record: {error}.")
                         driver.back()
                         continue
 
@@ -236,7 +236,7 @@ def get_glide_data(sources, service, options):
                 )
 
                 records.append(record)
-                print(f"Successfully scraped {link}\n{json.dumps(record, indent=4)}")
+                logging.info(f"Successfully scraped {link}\n{json.dumps(record, indent=4)}")
 
                 driver.back()
 

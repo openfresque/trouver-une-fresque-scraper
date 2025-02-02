@@ -21,7 +21,7 @@ from utils.location import get_address
 
 def scroll_to_bottom(driver):
     while True:
-        print("Scrolling to the bottom...")
+        logging.info("Scrolling to the bottom...")
         try:
             time.sleep(2)
             next_button = WebDriverWait(driver, 10).until(
@@ -45,14 +45,14 @@ def scroll_to_bottom(driver):
 
 
 def get_fec_data(sources, service, options):
-    print("Scraping data from lafresquedeleconomiecirculaire.com")
+    logging.info("Scraping data from lafresquedeleconomiecirculaire.com")
 
     driver = webdriver.Firefox(service=service, options=options)
 
     records = []
 
     for page in sources:
-        print("========================")
+        logging.info("========================")
         driver.get(page["url"])
         driver.implicitly_wait(2)
 
@@ -69,7 +69,7 @@ def get_fec_data(sources, service, options):
         links = [l for l in links if "lafresquedeleconomiecirculaire.com" in l]
 
         for link in links:
-            print(f"\n-> Processing {link} ...")
+            logging.info(f"\n-> Processing {link} ...")
             driver.get(link)
             driver.implicitly_wait(3)
             time.sleep(5)
@@ -80,7 +80,7 @@ def get_fec_data(sources, service, options):
             # Define the regex pattern for UUIDs
             uuid = link.split("/event-details/")[-1]
             if not uuid:
-                print("Rejecting record: UUID not found")
+                logging.info("Rejecting record: UUID not found")
                 continue
 
             ################################################################
@@ -107,7 +107,7 @@ def get_fec_data(sources, service, options):
             try:
                 event_start_datetime, event_end_datetime = get_dates(event_time)
             except FreskDateBadFormat as error:
-                print(f"Reject record: {error}")
+                logging.info(f"Reject record: {error}")
                 continue
 
             ################################################################
@@ -153,7 +153,7 @@ def get_fec_data(sources, service, options):
                         longitude,
                     ) = address_dict.values()
                 except FreskError as error:
-                    print(f"Rejecting record: {error}.")
+                    logging.info(f"Rejecting record: {error}.")
                     continue
 
             ################################################################
@@ -180,7 +180,7 @@ def get_fec_data(sources, service, options):
                         By.CSS_SELECTOR, 'div[data-hook="about-section"]'
                     )
                 except NoSuchElementException:
-                    print(f"Rejecting record: no description")
+                    logging.info(f"Rejecting record: no description")
                     continue
 
             description = description_el.text
@@ -239,7 +239,7 @@ def get_fec_data(sources, service, options):
             )
 
             records.append(record)
-            print(f"Successfully scraped {link}\n{json.dumps(record, indent=4)}")
+            logging.info(f"Successfully scraped {link}\n{json.dumps(record, indent=4)}")
 
     driver.quit()
 

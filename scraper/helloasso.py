@@ -17,7 +17,7 @@ from utils.location import get_address
 
 def scroll_to_bottom(driver):
     while True:
-        print("Scrolling to the bottom...")
+        logging.info("Scrolling to the bottom...")
         try:
             time.sleep(2)
             next_button = WebDriverWait(driver, 10).until(
@@ -41,14 +41,14 @@ def scroll_to_bottom(driver):
 
 
 def get_helloasso_data(sources, service, options):
-    print("Scraping data from helloasso.com")
+    logging.info("Scraping data from helloasso.com")
 
     driver = webdriver.Firefox(service=service, options=options)
 
     records = []
 
     for page in sources:
-        print(f"==================\nProcessing page {page}")
+        logging.info(f"==================\nProcessing page {page}")
         driver.get(page["url"])
         driver.implicitly_wait(5)
         time.sleep(3)
@@ -74,10 +74,10 @@ def get_helloasso_data(sources, service, options):
         ele = driver.find_elements(By.CSS_SELECTOR, "a.ActionLink-Event")
         links = [e.get_attribute("href") for e in ele]
         num_el = len(ele)
-        print(f"Found {num_el} elements")
+        logging.info(f"Found {num_el} elements")
 
         for link in links:
-            print(f"\n-> Processing {link} ...")
+            logging.info(f"\n-> Processing {link} ...")
             driver.get(link)
             driver.implicitly_wait(3)
 
@@ -86,7 +86,7 @@ def get_helloasso_data(sources, service, options):
             ################################################################
             uuid = link.split("/")[-1]
             if not uuid:
-                print("Rejecting record: UUID not found")
+                logging.info("Rejecting record: UUID not found")
                 continue
 
             ################################################################
@@ -108,13 +108,13 @@ def get_helloasso_data(sources, service, options):
                 )
                 event_time = date_info_el.text
             except NoSuchElementException as error:
-                print(f"Reject record: {error}")
+                logging.info(f"Reject record: {error}")
                 continue
 
             try:
                 event_start_datetime, event_end_datetime = get_dates(event_time)
             except Exception as e:
-                print(f"Rejecting record: {e}")
+                logging.info(f"Rejecting record: {e}")
                 continue
 
             ################################################################
@@ -140,7 +140,7 @@ def get_helloasso_data(sources, service, options):
                         By.CSS_SELECTOR, "section.CardAddress--Location"
                     )
                 except NoSuchElementException:
-                    print("Rejecting record: no location")
+                    logging.info("Rejecting record: no location")
                     continue
 
                 full_location = location_el.text
@@ -157,7 +157,7 @@ def get_helloasso_data(sources, service, options):
                         longitude,
                     ) = address_dict.values()
                 except FreskError as error:
-                    print(f"Rejecting record: {error}.")
+                    logging.info(f"Rejecting record: {error}.")
                     continue
 
             ################################################################
@@ -168,7 +168,7 @@ def get_helloasso_data(sources, service, options):
                     By.CSS_SELECTOR, "div.CampaignHeader--Description"
                 )
             except NoSuchElementException:
-                print(f"Rejecting record: no description")
+                logging.info(f"Rejecting record: no description")
                 continue
 
             description = description_el.text
@@ -220,7 +220,7 @@ def get_helloasso_data(sources, service, options):
             )
 
             records.append(record)
-            print(f"Successfully scraped {link}\n{json.dumps(record, indent=4)}")
+            logging.info(f"Successfully scraped {link}\n{json.dumps(record, indent=4)}")
 
     driver.quit()
 
