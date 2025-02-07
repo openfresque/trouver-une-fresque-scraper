@@ -42,6 +42,7 @@ Développer et maintenir Trouver une Fresque nous prend beaucoup de temps et d'�
 | Cyber Fresque | https://www.eventbrite.fr/o/senscyb-89802295343 | Scraping Eventbrite | OK |
 | Pitch Climat | https://www.billetweb.fr/multi_event.php?user=186116 | Scraping Billetweb | Prévu, priorité 1 |
 | Fresque de l'Environnement | | API | Prévu, priorité 1 |
+| Fresque de l'Equité | https://www.fresquedelequite.fr/ | Scraping custom | Prévu, priorité 1 |
 | Fresque du Sol | https://fresquedusol.com/comment-participer/dates-a-venir/ | Calendrier ICS | Prévu, priorité 2 |
 | Fresque de la Forêt | https://all4trees.org/agir/fresque-foret/evenements | Scraping site custom | Prévu, priorité 2 |
 | Atelier Découverte de la Renaissance Écologique | https://renaissanceecologique.org/ | Scraping site custom | Prévu, priorité 2 |
