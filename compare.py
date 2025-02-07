@@ -102,7 +102,7 @@ def main():
     totals1 = sum(row[1] for row in table)
     totals2 = sum(row[2] for row in table)
     table.append(["====Totals====", totals1, totals2, totals2 - totals1])
-    logging.info(tabulate(table, headers, tablefmt="fancy_grid"))
+    print(tabulate(table, headers, tablefmt="fancy_grid"))
 
 
 if __name__ == "__main__":
