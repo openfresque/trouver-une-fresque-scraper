@@ -1,6 +1,7 @@
 import numpy as np
 import time
 import json
+import logging
 import re
 
 from selenium import webdriver

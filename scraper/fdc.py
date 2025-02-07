@@ -1,6 +1,7 @@
 import json
 import re
 import time
+import logging
 
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
