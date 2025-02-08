@@ -26,7 +26,7 @@
         "type": "scraper",
         "iframe": "event17309",
         "id": 3
-    },    
+    },
     {
         "name": "Fresque du Numérique",
         "url": "https://www.billetweb.fr/shop.php?event=suisse-atelier-fresque-du-numerique&color=5190f5&page=1&margin=no_margin",
@@ -122,5 +122,23 @@
         "url": "https://www.eventbrite.com/cc/ateliers-grand-public-en-presentiel-hors-france-2157189",
         "type": "scraper",
         "id": 17
+    }
+    {
+        "name": "Fresque du Sol",
+        "url": "https://framagenda.org/remote.php/dav/public-calendars/KwNwGA232xD38CnN/?export",
+        "type": "scraper",
+        "id": 18
+    },
+    {
+        "name": "Power Play",
+        "url": "https://www.watted.ch/home/ateliers/powerplay/",
+        "type": "scraper",
+        "id": 19
+    },
+    {
+        "name": "Marche du Temps Profond",
+        "url": "https://airtable.com/appDWswlq1QSyOOmp/shrJMW7sD2JB74cNi/tblXzQmAo0qHF9AjFi",
+        "type": "scraper",
+        "id": 20
     }
 ]
