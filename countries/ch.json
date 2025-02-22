@@ -1,8 +1,126 @@
 [
     {
+        "name": "Fresque des Nouveaux Récits",
+        "url": "https://www.billetweb.fr/pro/fdnr",
+        "type": "scraper",
+        "iframe": "event21569",
+        "id": 0
+    },
+    {
+        "name": "Fresque Océane",
+        "url": "https://www.billetweb.fr/pro/billetteriefo",
+        "type": "scraper",
+        "iframe": "event15247",
+        "id": 1
+    },
+    {
+        "name": "Fresque de la Biodiversité",
+        "url": "https://www.billetweb.fr/fresque-de-la-biodiversite-geneve",
+        "type": "scraper",
+        "iframe": "event17309",
+        "id": 2
+    },
+    {
+        "name": "Fresque du Numérique",
+        "url": "https://www.billetweb.fr/shop.php?event=suisse-atelier-fresque-du-numerique&color=5190f5&page=1&margin=no_margin",
+        "type": "scraper",
+        "iframe": "eventu84999",
+        "id": 3
+    },
+    {
+        "name": "Fresque Agri'Alim",
+        "url": "https://www.billetweb.fr/pro/fresqueagrialim",
+        "type": "scraper",
+        "iframe": "event11421",
+        "id": 4
+    },
+    {
+        "name": "Fresque de l'Alimentation",
+        "url": "https://www.billetweb.fr/pro/fresquealimentation",
+        "type": "scraper",
+        "iframe": "event11155",
+        "id": 5
+    },
+    {
+        "name": "Fresque de la Construction",
+        "url": "https://www.billetweb.fr/pro/fresquedelaconstruction",
+        "type": "scraper",
+        "iframe": "event11574",
+        "id": 6
+    },
+    {
+        "name": "Fresque de la Mobilité",
+        "url": "https://www.billetweb.fr/pro/fresquedelamobilite",
+        "type": "scraper",
+        "iframe": "event11698",
+        "id": 7
+    },
+    {
+        "name": "Fresque du Sexisme",
+        "url": "https://www.billetweb.fr/pro/fresque-du-sexisme",
+        "type": "scraper",
+        "iframe": "event27112",
+        "id": 8
+    },
+    {
+        "name": "Atelier OGRE",
+        "url": "https://www.billetweb.fr/pro/atelierogre",
+        "type": "scraper",
+        "iframe": "event13026",
+        "id": 9
+    },
+    {
+        "name": "Fresque de l'Eau",
+        "url": "https://www.billetweb.fr/multi_event.php?user=138110",
+        "type": "scraper",
+        "iframe": "eventu138110",
+        "id": 11
+    },
+    {
+        "name": "Fresque du Textile",
+        "url": "https://www.billetweb.fr/multi_event.php?user=166793",
+        "type": "scraper",
+        "iframe": "event27458",
+        "filter": "textile",
+        "id": 14
+    },
+    {
+        "name": "Puzzle Climat",
+        "url": "https://www.billetweb.fr/multi_event.php?user=121600",
+        "type": "scraper",
+        "iframe": "event21038",
+        "id": 16
+    },
+    {
+        "name": "Fresque de la RSE",
+        "url": "https://www.billetweb.fr/pro/fresque",
+        "type": "scraper",
+        "iframe": "event35904",
+        "id": 18
+    },
+    {
+        "name": "2tonnes",
+        "url": "https://www.eventbrite.com/cc/ateliers-grand-public-en-presentiel-hors-france-2157189",
+        "type": "scraper",
+        "id": 100
+    },
+    {
+        "name": "Fresque du Plastique",
+        "url": "https://www.eventbrite.fr/o/la-fresque-du-plastique-45763194553",
+        "type": "scraper",
+        "id": 103
+    },
+    {
         "name": "Fresque du Climat (ateliers)",
         "url": "https://climatefresk.org/fr-ch/inscription-atelier/grand-public/",
         "type": "scraper",
-        "id": 9
+        "id": 200
+    },
+    {
+        "name": "Fresque des Frontières Planétaires (ateliers)",
+        "url": "https://1erdegre.glide.page/dl/3b1bc8",
+        "type": "scraper",
+        "filter": "Fresque des frontières planétaires",
+        "id": 300
     }
 ]
