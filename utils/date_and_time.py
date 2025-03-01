@@ -1,7 +1,7 @@
 import re
 import traceback
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from dateutil.parser import parse
 
 from utils.errors import FreskError, FreskDateBadFormat, FreskDateDifferentTimezone
@@ -67,12 +67,8 @@ def get_dates(event_time):
 
         # Thu Oct 19, 2023 from 01:00 PM to 02:00 PM
         if match := re.match(
-            r"(?P<date>.*)\s"
-            r"from\s"
-            r"(?P<start_time>.*)\s"
-            r"to\s"
-            r"(?P<end_time>.*)",
-            event_time
+            r"(?P<date>.*)\s" r"from\s" r"(?P<start_time>.*)\s" r"to\s" r"(?P<end_time>.*)",
+            event_time,
         ):
             event_start_datetime = parse(f"{match.group('date')} {match.group('start_time')}")
             event_end_datetime = parse(f"{match.group('date')} {match.group('end_time')}")
@@ -92,12 +88,8 @@ def get_dates(event_time):
             r"(?P<end_time>.*)",
             event_time,
         ):
-            event_start_datetime = parse(
-                f"{match.group('start_date')} {match.group('start_time')}"
-            )
-            event_end_datetime = parse(
-                f"{match.group('end_date')} {match.group('end_time')}"
-            )
+            event_start_datetime = parse(f"{match.group('start_date')} {match.group('start_time')}")
+            event_end_datetime = parse(f"{match.group('end_date')} {match.group('end_time')}")
             return event_start_datetime, event_end_datetime
 
         # ===================
@@ -105,12 +97,7 @@ def get_dates(event_time):
 
         # Thu Oct 19, 2023 at 01:00 PM
         # March 7, 2025 at 10:00 AM
-        elif match := re.match(
-            r"(?P<date>.*)\s"
-            r"at\s"
-            r"(?P<time>.*)",
-            event_time
-        ):
+        elif match := re.match(r"(?P<date>.*)\s" r"at\s" r"(?P<time>.*)", event_time):
             event_start_datetime = parse(f"{match.group('date')} {match.group('time')}")
             event_end_datetime = event_start_datetime + timedelta(hours=DEFAULT_DURATION)
             return event_start_datetime, event_end_datetime
@@ -158,7 +145,7 @@ def get_dates(event_time):
             r"(?P<start_time>\d{1,2}h\d{2})\s"
             r"à\s"
             r"(?P<end_time>\d{1,2}h\d{2})",
-            event_time
+            event_time,
         ):
             # Construct the datetime objects
             event_start_datetime = datetime(
@@ -225,7 +212,7 @@ def get_dates(event_time):
             r"(?P<start_time>\d{1,2}h\d{2})\s"
             r"à\s"
             r"(?P<end_time>\d{1,2}h\d{2})",
-            event_time
+            event_time,
         ):
             event_start_datetime = datetime(
                 int(match.group("year")),
@@ -246,7 +233,7 @@ def get_dates(event_time):
         # ===================
         # HelloAsso
 
-        # Le 12 février 2025, de 18h à 20h 
+        # Le 12 février 2025, de 18h à 20h
         elif match := re.match(
             r"Le\s"
             r"(?P<day>\d{1,2})\s"
@@ -256,7 +243,7 @@ def get_dates(event_time):
             r"(?P<start_time>\d{1,2}h\d{0,2})\s"
             r"à\s"
             r"(?P<end_time>\d{1,2}h\d{0,2})",
-            event_time
+            event_time,
         ):
             start_parts = match.group("start_time").split("h")
             event_start_datetime = datetime(

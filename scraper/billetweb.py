@@ -4,7 +4,7 @@ import logging
 from datetime import timedelta
 
 from selenium import webdriver
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -27,7 +27,13 @@ def get_billetweb_data(sources, service, options):
     for page in sources:
         logging.info(f"==================\nProcessing page {page}")
         driver.get(page["url"])
-        wait.until(EC.frame_to_be_available_and_switch_to_it((By.ID, page["iframe"])))
+
+        try:
+            wait.until(EC.frame_to_be_available_and_switch_to_it((By.ID, page["iframe"])))
+        except TimeoutException:
+            logging.info("Rejecting record: iframe not found")
+            continue
+
         wait.until(lambda driver: driver.execute_script("return document.readyState") == "complete")
         ele = driver.find_elements(By.CSS_SELECTOR, "a.naviguate")
         links = [e.get_attribute("href") for e in ele]
