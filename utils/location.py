@@ -195,6 +195,7 @@ def get_address(full_location):
         "city": city,
         "department": num_department,
         "zip_code": address["postcode"],
+        "country_code": address["country_code"],
         "latitude": location.raw["lat"],
         "longitude": location.raw["lon"],
     }

@@ -24,7 +24,9 @@ from utils.location import get_address
 def delete_cookies_overlay(driver):
     try:
         transcend_element = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, "#transcend-consent-manager"))
+            EC.presence_of_element_located(
+                (By.CSS_SELECTOR, "#transcend-consent-manager")
+            )
         )
 
         # Use JavaScript to remove the transcend-consent-manager element
@@ -57,13 +59,17 @@ def scroll_to_bottom(driver):
                         )
                     )
 
-                    desired_y = (next_button.size["height"] / 2) + next_button.location["y"]
+                    desired_y = (next_button.size["height"] / 2) + next_button.location[
+                        "y"
+                    ]
                     window_h = driver.execute_script("return window.innerHeight")
                     window_y = driver.execute_script("return window.pageYOffset")
                     current_y = (window_h / 2) + window_y
                     scroll_y_by = desired_y - current_y
 
-                    driver.execute_script("window.scrollBy(0, arguments[0]);", scroll_y_by)
+                    driver.execute_script(
+                        "window.scrollBy(0, arguments[0]);", scroll_y_by
+                    )
                     next_button.click()
 
                 except StaleElementReferenceException:
@@ -100,7 +106,9 @@ def get_eventbrite_data(sources, service, options):
         logging.info(f"Found {len(event_card_divs)} events")
 
         for event_card_div in event_card_divs:
-            link_elements = event_card_div.find_elements(By.CSS_SELECTOR, "a.event-card-link")
+            link_elements = event_card_div.find_elements(
+                By.CSS_SELECTOR, "a.event-card-link"
+            )
             elements.extend(link_elements)
 
         links = []
@@ -140,7 +148,9 @@ def get_eventbrite_data(sources, service, options):
                 pass
 
             try:
-                badge = driver.find_element(By.CSS_SELECTOR, "div.enhanced-expired-badge")
+                badge = driver.find_element(
+                    By.CSS_SELECTOR, "div.enhanced-expired-badge"
+                )
                 logging.info("Rejecting record: event expired")
                 continue
             except NoSuchElementException:
@@ -151,7 +161,9 @@ def get_eventbrite_data(sources, service, options):
             ################################################################
             sold_out = False
             try:
-                badge = driver.find_element(By.XPATH, '//div[@data-testid="salesEndedMessage"]')
+                badge = driver.find_element(
+                    By.XPATH, '//div[@data-testid="salesEndedMessage"]'
+                )
                 # If the element has children elements, it is enabled
                 sold_out = bool(badge.find_elements(By.XPATH, "./*"))
             except NoSuchElementException:
@@ -181,7 +193,9 @@ def get_eventbrite_data(sources, service, options):
             ################################################################
             online = False
             try:
-                online_el = driver.find_element(By.CSS_SELECTOR, "p.location-info__address-text")
+                online_el = driver.find_element(
+                    By.CSS_SELECTOR, "p.location-info__address-text"
+                )
                 online = is_online(online_el.text)
             except NoSuchElementException:
                 pass
@@ -197,9 +211,12 @@ def get_eventbrite_data(sources, service, options):
             longitude = ""
             latitude = ""
             zip_code = ""
+            country_code = ""
 
             if not online:
-                location_el = driver.find_element(By.CSS_SELECTOR, "div.location-info__address")
+                location_el = driver.find_element(
+                    By.CSS_SELECTOR, "div.location-info__address"
+                )
                 full_location_text = location_el.text.split("\n")
                 location_name = full_location_text[0]
                 address_and_city = full_location_text[1]
@@ -213,6 +230,7 @@ def get_eventbrite_data(sources, service, options):
                         city,
                         department,
                         zip_code,
+                        country_code,
                         latitude,
                         longitude,
                     ) = address_dict.values()
@@ -224,7 +242,9 @@ def get_eventbrite_data(sources, service, options):
             # Description
             ################################################################
             try:
-                description_title_el = driver.find_element(By.CSS_SELECTOR, "div.eds-text--left")
+                description_title_el = driver.find_element(
+                    By.CSS_SELECTOR, "div.eds-text--left"
+                )
                 description = description_title_el.text
             except NoSuchElementException:
                 logging.info("Rejecting record: Description not found.")
@@ -247,7 +267,9 @@ def get_eventbrite_data(sources, service, options):
 
             try:
                 date_time_div = WebDriverWait(driver, 10).until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, "div.select-date-and-time"))
+                    EC.presence_of_element_located(
+                        (By.CSS_SELECTOR, "div.select-date-and-time")
+                    )
                 )
                 if date_time_div:
                     driver.execute_script("window.scrollBy(0, arguments[0]);", 800)
@@ -274,7 +296,9 @@ def get_eventbrite_data(sources, service, options):
                             raise FreskDateNotFound
 
                         try:
-                            event_start_datetime, event_end_datetime = get_dates(event_time)
+                            event_start_datetime, event_end_datetime = get_dates(
+                                event_time
+                            )
                         except FreskDateBadFormat as error:
                             logging.info(f"Reject record: {error}")
                             continue
@@ -300,7 +324,12 @@ def get_eventbrite_data(sources, service, options):
 
                         if not already_scanned:
                             event_info.append(
-                                [uuid, event_start_datetime, event_end_datetime, tickets_link]
+                                [
+                                    uuid,
+                                    event_start_datetime,
+                                    event_end_datetime,
+                                    tickets_link,
+                                ]
                             )
 
             # There is only one event on this page.
@@ -334,14 +363,19 @@ def get_eventbrite_data(sources, service, options):
                 ################################################################
                 uuid = re.search(r"/e/([^/?]+)", tickets_link).group(1)
 
-                event_info.append([uuid, event_start_datetime, event_end_datetime, tickets_link])
+                event_info.append(
+                    [uuid, event_start_datetime, event_end_datetime, tickets_link]
+                )
 
             ################################################################
             # Session loop
             ################################################################
-            for index, (uuid, event_start_datetime, event_end_datetime, link) in enumerate(
-                event_info
-            ):
+            for index, (
+                uuid,
+                event_start_datetime,
+                event_end_datetime,
+                link,
+            ) in enumerate(event_info):
                 record = get_record_dict(
                     f"{page['id']}-{uuid}",
                     page["id"],
@@ -354,6 +388,7 @@ def get_eventbrite_data(sources, service, options):
                     city,
                     department,
                     zip_code,
+                    country_code,
                     latitude,
                     longitude,
                     online,
@@ -365,7 +400,9 @@ def get_eventbrite_data(sources, service, options):
                     description,
                 )
                 records.append(record)
-                logging.info(f"Successfully scraped {link}\n{json.dumps(record, indent=4)}")
+                logging.info(
+                    f"Successfully scraped {link}\n{json.dumps(record, indent=4)}"
+                )
 
     driver.quit()
 
