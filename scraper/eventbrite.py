@@ -302,12 +302,7 @@ def get_eventbrite_data(sources, service, options):
 
                         if not already_scanned:
                             event_info.append(
-                                [
-                                    uuid,
-                                    event_start_datetime,
-                                    event_end_datetime,
-                                    tickets_link,
-                                ]
+                                [uuid, event_start_datetime, event_end_datetime, tickets_link]
                             )
 
             # There is only one event on this page.
