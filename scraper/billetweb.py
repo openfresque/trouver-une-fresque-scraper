@@ -240,7 +240,9 @@ def get_billetweb_data(sources, service, options):
                 ################################################################
                 # Location data
                 ################################################################
-                location_name = address = city = department = longitude = latitude = zip_code = country_code = ""
+                location_name = address = city = department = longitude = latitude = zip_code = (
+                    country_code
+                ) = ""
                 if not online:
                     try:
                         address_dict = get_address(full_location)

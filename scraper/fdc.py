@@ -45,15 +45,15 @@ def get_fdc_data(sources, service, options):
                 # Parse event id
                 ################################################################
                 # Define the regex pattern for UUIDs
-                uuid_pattern = r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
+                uuid_pattern = (
+                    r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
+                )
                 uuids = re.findall(uuid_pattern, link)
                 if not uuids:
                     logging.info("Rejecting record: UUID not found")
                     driver.back()
                     wait = WebDriverWait(driver, 10)
-                    iframe = wait.until(
-                        EC.presence_of_element_located((By.TAG_NAME, "iframe"))
-                    )
+                    iframe = wait.until(EC.presence_of_element_located((By.TAG_NAME, "iframe")))
                     driver.switch_to.frame(iframe)
                     continue
 
@@ -79,9 +79,7 @@ def get_fdc_data(sources, service, options):
                     logging.info(f"Reject record: {error}")
                     driver.back()
                     wait = WebDriverWait(driver, 10)
-                    iframe = wait.until(
-                        EC.presence_of_element_located((By.TAG_NAME, "iframe"))
-                    )
+                    iframe = wait.until(EC.presence_of_element_located((By.TAG_NAME, "iframe")))
                     driver.switch_to.frame(iframe)
                     continue
 
@@ -129,9 +127,7 @@ def get_fdc_data(sources, service, options):
                         logging.info(f"Rejecting record: {error}.")
                         driver.back()
                         wait = WebDriverWait(driver, 10)
-                        iframe = wait.until(
-                            EC.presence_of_element_located((By.TAG_NAME, "iframe"))
-                        )
+                        iframe = wait.until(EC.presence_of_element_located((By.TAG_NAME, "iframe")))
                         driver.switch_to.frame(iframe)
                         continue
 
@@ -141,9 +137,7 @@ def get_fdc_data(sources, service, options):
                 description_title_el = driver.find_element(
                     By.XPATH, "//strong[text()='Description']"
                 )
-                parent_description_el = description_title_el.find_element(
-                    By.XPATH, ".."
-                )
+                parent_description_el = description_title_el.find_element(By.XPATH, "..")
                 description = parent_description_el.text
 
                 ################################################################
@@ -198,15 +192,11 @@ def get_fdc_data(sources, service, options):
                 )
 
                 records.append(record)
-                logging.info(
-                    f"Successfully scraped {link}\n{json.dumps(record, indent=4)}"
-                )
+                logging.info(f"Successfully scraped {link}\n{json.dumps(record, indent=4)}")
 
                 driver.back()
                 wait = WebDriverWait(driver, 10)
-                iframe = wait.until(
-                    EC.presence_of_element_located((By.TAG_NAME, "iframe"))
-                )
+                iframe = wait.until(EC.presence_of_element_located((By.TAG_NAME, "iframe")))
                 driver.switch_to.frame(iframe)
 
             try:
