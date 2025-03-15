@@ -134,6 +134,7 @@ def get_helloasso_data(sources, service, options):
             longitude = ""
             latitude = ""
             zip_code = ""
+            country_code = ""
 
             if not online:
                 try:
@@ -154,6 +155,7 @@ def get_helloasso_data(sources, service, options):
                         city,
                         department,
                         zip_code,
+                        country_code,
                         latitude,
                         longitude,
                     ) = address_dict.values()
@@ -209,6 +211,7 @@ def get_helloasso_data(sources, service, options):
                 city,
                 department,
                 zip_code,
+                country_code,
                 latitude,
                 longitude,
                 online,

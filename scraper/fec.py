@@ -135,6 +135,7 @@ def get_fec_data(sources, service, options):
             longitude = ""
             latitude = ""
             zip_code = ""
+            country_code = ""
 
             if not online:
                 location_el = driver.find_element(
@@ -150,6 +151,7 @@ def get_fec_data(sources, service, options):
                         city,
                         department,
                         zip_code,
+                        country_code,
                         latitude,
                         longitude,
                     ) = address_dict.values()
@@ -228,6 +230,7 @@ def get_fec_data(sources, service, options):
                 city,
                 department,
                 zip_code,
+                country_code,
                 latitude,
                 longitude,
                 online,

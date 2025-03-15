@@ -103,6 +103,7 @@ def get_fdc_data(sources, service, options):
                 longitude = ""
                 latitude = ""
                 zip_code = ""
+                country_code = ""
 
                 if not online:
                     pin_icon = driver.find_element(By.CLASS_NAME, "fa-map-pin")
@@ -110,6 +111,7 @@ def get_fdc_data(sources, service, options):
                     full_location = parent_div.text
 
                     try:
+                        logging.info(f"Full location: {full_location}")
                         address_dict = get_address(full_location)
                         (
                             location_name,
@@ -117,6 +119,7 @@ def get_fdc_data(sources, service, options):
                             city,
                             department,
                             zip_code,
+                            country_code,
                             latitude,
                             longitude,
                         ) = address_dict.values()
@@ -176,6 +179,7 @@ def get_fdc_data(sources, service, options):
                     city,
                     department,
                     zip_code,
+                    country_code,
                     latitude,
                     longitude,
                     online,

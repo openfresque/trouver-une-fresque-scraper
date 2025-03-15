@@ -133,7 +133,7 @@ def get_address(full_location):
 
         address = location.raw["address"]
 
-        if address["country_code"] != "fr":
+        if address["country_code"] != "fr" and address["country_code"] != "ch":
             raise FreskCountryNotSupported(address, full_location)
 
         house_number = ""
@@ -158,19 +158,32 @@ def get_address(full_location):
         else:
             raise FreskAddressBadFormat(address, full_location, "city")
 
-        department = None
-        if "state_district" in address.keys():
-            department = address["state_district"]
-        elif "county" in address.keys():
-            department = address["county"]
-        elif "city_district" in address.keys():
-            department = address["city_district"]
-        elif "state" in address.keys():
-            department = address["state"]
-        else:
-            raise FreskAddressBadFormat(address, full_location, "department")
-
-        num_department = department_to_num(department)
+        num_department = None
+        if address["country_code"] == "fr":
+            department = None
+            if "state_district" in address.keys():
+                department = address["state_district"]
+            elif "county" in address.keys():
+                department = address["county"]
+            elif "city_district" in address.keys():
+                department = address["city_district"]
+            elif "state" in address.keys():
+                department = address["state"]
+            else:
+                raise FreskAddressBadFormat(address, full_location, "department")
+            try:
+                num_department = department_to_num(department)
+            except FreskError:
+                raise
+        if address["country_code"] == "ch":
+            # Swiss department "numbers" are ISO codes from https://en.wikipedia.org/wiki/ISO_3166-2:CH.
+            if "ISO3166-2-lvl4" in address.keys():
+                canton = address["ISO3166-2-lvl4"]
+                if not canton.startswith("CH-"):
+                    raise FreskAddressBadFormat(address, full_location, "department")
+                num_department = canton[3:]
+            else:
+                raise FreskAddressBadFormat(address, full_location, "department")
 
     except FreskError as e:
         logging.error(f"get_address: {e}")
@@ -182,6 +195,7 @@ def get_address(full_location):
         "city": city,
         "department": num_department,
         "zip_code": address["postcode"],
+        "country_code": address["country_code"],
         "latitude": location.raw["lat"],
         "longitude": location.raw["lon"],
     }

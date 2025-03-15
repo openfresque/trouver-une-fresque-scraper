@@ -197,6 +197,7 @@ def get_eventbrite_data(sources, service, options):
             longitude = ""
             latitude = ""
             zip_code = ""
+            country_code = ""
 
             if not online:
                 location_el = driver.find_element(By.CSS_SELECTOR, "div.location-info__address")
@@ -213,6 +214,7 @@ def get_eventbrite_data(sources, service, options):
                         city,
                         department,
                         zip_code,
+                        country_code,
                         latitude,
                         longitude,
                     ) = address_dict.values()
@@ -339,9 +341,12 @@ def get_eventbrite_data(sources, service, options):
             ################################################################
             # Session loop
             ################################################################
-            for index, (uuid, event_start_datetime, event_end_datetime, link) in enumerate(
-                event_info
-            ):
+            for index, (
+                uuid,
+                event_start_datetime,
+                event_end_datetime,
+                link,
+            ) in enumerate(event_info):
                 record = get_record_dict(
                     f"{page['id']}-{uuid}",
                     page["id"],
@@ -354,6 +359,7 @@ def get_eventbrite_data(sources, service, options):
                     city,
                     department,
                     zip_code,
+                    country_code,
                     latitude,
                     longitude,
                     online,

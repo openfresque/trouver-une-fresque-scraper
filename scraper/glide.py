@@ -39,7 +39,8 @@ def get_glide_data(sources, service, options):
         while True:
             time.sleep(5)
             ele = driver.find_elements(
-                By.XPATH, "//div[contains(@class, 'collection-item') and @role='button']"
+                By.XPATH,
+                "//div[contains(@class, 'collection-item') and @role='button']",
             )
             num_el = len(ele)
             logging.info(f"Found {num_el} elements")
@@ -47,7 +48,8 @@ def get_glide_data(sources, service, options):
             for i in range(num_el):
                 time.sleep(5)
                 ele = driver.find_elements(
-                    By.XPATH, "//div[contains(@class, 'collection-item') and @role='button']"
+                    By.XPATH,
+                    "//div[contains(@class, 'collection-item') and @role='button']",
                 )
 
                 # The following is ugly, but necessary as elements are loaded dynamically in JS.
@@ -58,7 +60,8 @@ def get_glide_data(sources, service, options):
                     driver.refresh()
                     time.sleep(5)
                     ele = driver.find_elements(
-                        By.XPATH, "//div[contains(@class, 'collection-item') and @role='button']"
+                        By.XPATH,
+                        "//div[contains(@class, 'collection-item') and @role='button']",
                     )
 
                     count += 1
@@ -144,6 +147,7 @@ def get_glide_data(sources, service, options):
                 longitude = ""
                 latitude = ""
                 zip_code = ""
+                country_code = ""
 
                 if not online:
                     try:
@@ -168,6 +172,7 @@ def get_glide_data(sources, service, options):
                             city,
                             department,
                             zip_code,
+                            country_code,
                             latitude,
                             longitude,
                         ) = address_dict.values()
@@ -225,6 +230,7 @@ def get_glide_data(sources, service, options):
                     city,
                     department,
                     zip_code,
+                    country_code,
                     latitude,
                     longitude,
                     online,
