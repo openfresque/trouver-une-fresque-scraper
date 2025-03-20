@@ -95,6 +95,7 @@ def get_glorieuses_data(source):
                     city,
                     department,
                     zip_code,
+                    country_code,
                     latitude,
                     longitude,
                 ) = address_dict.values()
@@ -147,6 +148,7 @@ def get_glorieuses_data(source):
             city,
             department,
             zip_code,
+            country_code,
             latitude,
             longitude,
             online,
