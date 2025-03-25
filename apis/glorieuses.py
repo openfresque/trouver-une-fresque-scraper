@@ -64,7 +64,11 @@ def get_glorieuses_data(source):
         ###########################################################
         # Is it an online event?
         ################################################################
-        online = "en ligne" in json_record["Format"].lower()
+        if "Format" in json_record and json_record["Format"] is not None:
+            online = "en ligne" in json_record["Format"].lower()
+        else:
+            logging.info(f"Rejecting record: no workshop format provided")
+            continue
 
         ################################################################
         # Location data
