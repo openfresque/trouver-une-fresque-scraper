@@ -81,6 +81,7 @@ def get_glorieuses_data(source):
         longitude = ""
         latitude = ""
         zip_code = ""
+        country_code = ""
 
         if not online:
             address = json_record["Adresse"]
