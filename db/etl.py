@@ -12,7 +12,7 @@ def update_most_recent(conn, table):
     WITH MissingRows AS (
         SELECT S."id", S."workshop_type", MAX(S."scrape_date") AS max_scrape_date
         FROM {table} S
-        LEFT JOIN auth.events_future F
+        LEFT JOIN private.events_future F
         ON S."id" = F."id" AND S."workshop_type" = F."workshop_type"
         WHERE F."id" IS NULL
         GROUP BY S."id", S."workshop_type"
@@ -79,11 +79,11 @@ def etl(conn, df):
 
     # Insert all events to the historical table. Setting most_recent to False,
     # but maybe the call to `update_most_recent()` below will change this.
-    insert(conn, df, "auth.events_scraped", most_recent=False)
+    insert(conn, df, "private.events_scraped", most_recent=False)
 
     # Delete all future events before inserting them again, so that they are
     # updated
-    truncate(conn, "auth.events_future")
-    insert(conn, df, "auth.events_future", most_recent=True)
+    truncate(conn, "private.events_future")
+    insert(conn, df, "private.events_future", most_recent=True)
 
-    update_most_recent(conn, "auth.events_scraped")
+    update_most_recent(conn, "private.events_scraped")

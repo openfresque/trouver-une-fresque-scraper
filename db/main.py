@@ -53,5 +53,5 @@ def main():
             etl(conn, df)
         else:
             if args.truncate_first:
-                truncate(conn, "auth.events_future")
-            insert(conn, df, "auth.events_future")
+                truncate(conn, "private.events_future")
+            insert(conn, df, "private.events_future")
