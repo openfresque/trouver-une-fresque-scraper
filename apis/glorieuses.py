@@ -7,6 +7,7 @@ from datetime import datetime
 
 from db.records import get_record_dict
 from utils.errors import FreskError
+from utils.keywords import *
 from utils.location import get_address
 
 
@@ -65,7 +66,7 @@ def get_glorieuses_data(source):
         # Is it an online event?
         ################################################################
         if "Format" in json_record and json_record["Format"] is not None:
-            online = "en ligne" in json_record["Format"].lower()
+            online = is_online(json_record["Format"])
         else:
             logging.info(f"Rejecting record: no workshop format provided")
             continue
@@ -119,8 +120,7 @@ def get_glorieuses_data(source):
         ################################################################
         # Training?
         ################################################################
-        training_list = ["formation", "briefing", "animateur"]
-        training = any(w in json_record["Type"].lower() for w in training_list)
+        training = is_training(json_record["Type"])
 
         ################################################################
         # Is it full?
