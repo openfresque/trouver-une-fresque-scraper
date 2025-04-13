@@ -16,6 +16,7 @@ SCRAPER_FNS = {
     "climatefresk.org": get_fdc_data,
     "eventbrite.fr": get_eventbrite_data,
     "fresqueduclimat.org": get_fdc_data,
+    "fresquedunumerique.org": get_billetweb_data,
     "lafresquedeleconomiecirculaire.com": get_fec_data,
     "1erdegre.glide.page": get_glide_data,
     "helloasso.com": get_helloasso_data,
@@ -43,16 +44,16 @@ def main(scrapers, headless=False):
     sorted_workshops = {}
 
     # Make sure that we have a scraper available for each fresk entry
-    for sourcek in SCRAPER_FNS:
+    for sourcek, fn_value in SCRAPER_FNS.items():
         for workshop in scrapers:
             if sourcek in workshop["url"]:
-                # Organize fresks by keys in SCRAPER_FNS
-                if sourcek not in sorted_workshops:
-                    sorted_workshops[sourcek] = []
-                sorted_workshops[sourcek].append(workshop)
+                # Organize fresks by values in SCRAPER_FNS
+                if fn_value not in sorted_workshops:
+                    sorted_workshops[fn_value] = []
+                sorted_workshops[fn_value].append(workshop)
 
-    for sourcek, sourcev in sorted_workshops.items():
-        records += SCRAPER_FNS[sourcek](sourcev, service=service, options=options)
+    for fn_key, sourcev in sorted_workshops.items():
+        records += fn_key(sourcev, service=service, options=options)
 
     return pd.DataFrame(records)
 
