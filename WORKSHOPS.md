@@ -42,6 +42,7 @@ Développer et maintenir Trouver une Fresque nous prend beaucoup de temps et d'�
 | Fresque du Bénévolat | https://www.eventbrite.fr/o/jeveuxaidergouvfr-77010082313 | Scraping Eventbrite | OK |
 | Fresque du Plastique | https://www.eventbrite.fr/o/la-fresque-du-plastique-45763194553 | Scraping Eventbrite | OK |
 | Cyber Fresque | https://www.eventbrite.fr/o/senscyb-89802295343 | Scraping Eventbrite | OK |
+| Fresque de la Transition Energétique | https://fresques-tilleul.glide.page/dl/6471c6 | Scraping Glide Pages | Prévu, priorité 1 |
 | Pitch Climat | https://www.billetweb.fr/multi_event.php?user=186116 | Scraping Billetweb | Prévu, priorité 1 |
 | Fresque de l'Equité | https://www.fresquedelequite.fr/ | Scraping custom | Prévu, priorité 1 |
 | Fresque du Mouvement | https://www.eventbrite.fr/o/la-fresque-du-mouvement-108241184341 | Scraping Eventbrite | Prévu, priorité 1 |
@@ -66,5 +67,6 @@ Nous avons pris connaissance d'initiatives locales organisée au niveau du dépa
 | ------------- |:-------------:| :-----:| :-----:|
 | Atelier Déclics | https://www.helloasso.com/associations/objective-zero | Scraping HelloAsso | Non |
 | Isère | https://enjeuxcommuns.fr/les-prochains-ateliers-en-isere/ | Airtable | Non |
-| Bas-Rhin/Haut-Rhin | https://hoplatransition.org/index.php/nos-evenements/ | Custom | Non |
+| Bas-Rhin/Haut-Rhin | https://hoplatransition.org/index.php/nos-evenements/ | Framagenda | Non |
 | Réunion | https://fresques.re/event-directory/ | Custom | Non |
+| Marseille | https://fada.earth/ | Airtable | Non |
