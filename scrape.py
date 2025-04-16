@@ -1,6 +1,8 @@
 import argparse
 import json
 import logging
+import subprocess
+import sys
 import pandas as pd
 import psycopg
 
@@ -47,6 +49,26 @@ def configure_logging(log_file_path, error_log_file_path):
     logger.addHandler(file_handler)
     logger.addHandler(stream_handler)
     logger.addHandler(error_file_handler)
+
+
+def is_git_repository_dirty():
+    # Check if the repository is dirty
+    try:
+        result = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True)
+        return bool(result.stdout.strip())
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Error checking git status: {e}")
+        sys.exit(1)
+
+
+def get_git_commit_hash():
+    # Get the current commit hash
+    try:
+        result = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True)
+        return result.stdout.strip()
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Error checking git status: {e}")
+        sys.exit(1)
 
 
 def get_sources(content):
@@ -102,6 +124,17 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
+    dirty = False
+
+    # This scraper should be run from a clean state to ensure reproducibility
+    if is_git_repository_dirty():
+        dirty = True
+        logging.warning("The git repository is dirty. Consider a clean state for reproducibility.")
+        user_input = input("Do you want to continue? (y/n): ").strip().lower()
+        if user_input != "y":
+            logging.error("Operation cancelled.")
+            sys.exit(0)
+
     # Validate the source file
     source_path = Path(f"countries/{args.country}.json")
     try:
@@ -119,6 +152,11 @@ if __name__ == "__main__":
     scraping_time = dt.strftime("%Y%m%d_%H%M%S")
     results_path = Path(f"results/{args.country}/{scraping_time}")
     results_path.mkdir(parents=True, exist_ok=True)
+    commit_hash = get_git_commit_hash()
+    with open(f"{results_path}/commit_hash.txt", "w") as file:
+        file.write(commit_hash)
+        if dirty:
+            file.write("\n" + "dirty" + "\n")
 
     # Logging
     log_path = results_path / Path(f"log.txt")
