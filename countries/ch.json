@@ -21,10 +21,34 @@
         "id": 2
     },
     {
+        "name": "Biodiversity Collage",
+        "language": "en",
+        "url": "https://www.billetweb.fr/biodiversity-collage-zurich-switzerland&multi=17309&margin=no_margin&color=99ad23&parent=fresquedelabiodiversite&margin=no_margin&color=99ad23A",
+        "type": "scraper",
+        "iframe": "event17309",
+        "id": 2
+    },
+    {
         "name": "Fresque du Numérique",
         "url": "https://www.billetweb.fr/shop.php?event=suisse-atelier-fresque-du-numerique&color=5190f5&page=1&margin=no_margin",
         "type": "scraper",
         "iframe": "eventu84999",
+        "id": 3
+    },
+    {
+        "name": "Digital Puzzle",
+        "language": "de",
+        "url": "https://www.billetweb.fr/digital-collage-dach&multi=12991&language=en&color=5190F5&parent=1&language=en&color=5190F5",
+        "type": "scraper",
+        "iframe": "eventdigital-collage-dach",
+        "id": 3
+    },
+    {
+        "name": "Digital Collage",
+        "language": "en",
+        "url": "https://www.billetweb.fr/united-kingdom-digital-collage&multi=12991&language=en&color=5190F5&parent=1&language=en&color=5190F5",
+        "type": "scraper",
+        "iframe": "eventunited-kingdom-digital-collage",
         "id": 3
     },
     {
@@ -115,6 +139,24 @@
         "url": "https://climatefresk.org/fr-ch/inscription-atelier/grand-public/",
         "type": "scraper",
         "id": 200
+    },
+        {
+        "name": "Climate Fresk (workshops)",
+        "url": "https://climatefresk.org/de-ch/workshop-anmeldung/offentlichkeit/",
+        "type": "scraper",
+        "id": 200
+    },
+    {
+        "name": "Fresque de l'Economie Circulaire",
+        "url": "https://www.billetweb.fr/pro/lafresquedeleconomiecirculaire",
+        "type": "scraper",
+        "id": 300
+    },
+    {
+        "name": "Circular Economy Collage",
+        "url": "https://www.eventbrite.fr/o/fresque-de-leconomie-circulaire-68155531313",
+        "type": "scraper",
+        "id": 300
     },
     {
         "name": "Fresque des Frontières Planétaires (ateliers)",

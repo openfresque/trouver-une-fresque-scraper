@@ -233,6 +233,7 @@ def get_glide_data(sources, service, options):
                     country_code,
                     latitude,
                     longitude,
+                    page["language_code"],
                     online,
                     training,
                     sold_out,

@@ -19,6 +19,7 @@ def get_record_dict(
     country_code,
     latitude,
     longitude,
+    language_code,
     online,
     training,
     sold_out,
@@ -45,6 +46,9 @@ def get_record_dict(
         "country_code": country_code,
         "latitude": latitude,
         "longitude": longitude,
+        "language_code": (
+            language_code.strip() if bool(language_code and language_code.strip()) else "fr"
+        ),
         "online": online,
         "training": training,
         "sold_out": sold_out,
