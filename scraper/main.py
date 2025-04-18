@@ -16,7 +16,6 @@ SCRAPER_FNS = {
     "climatefresk.org": get_fdc_data,
     "eventbrite.fr": get_eventbrite_data,
     "fresqueduclimat.org": get_fdc_data,
-    "fresquedunumerique.org": get_billetweb_data,
     "lafresquedeleconomiecirculaire.com": get_fec_data,
     "1erdegre.glide.page": get_glide_data,
     "helloasso.com": get_helloasso_data,
