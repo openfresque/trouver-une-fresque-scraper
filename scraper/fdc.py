@@ -95,11 +95,11 @@ def get_fdc_data(sources, service, options):
                     parent = globe_in_event.find_element(By.XPATH, "..")
                     language_code = get_language_code(parent.text)
                 except FreskLanguageNotRecognized as e:
-                    logging.warning(f"Assuming workshop language as French: {e}")
-                    language_code = "fr"
+                    logging.warning(f"Unable to parse workshop language: {e}")
+                    language_code = None
                 except NoSuchElementException:
-                    logging.warning("Unable to find workshop language, assuming French.")
-                    language_code = "fr"
+                    logging.warning("Unable to find workshop language on the page.")
+                    language_code = None
 
                 ################################################################
                 # Is it an online event?

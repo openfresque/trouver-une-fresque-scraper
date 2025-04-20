@@ -362,7 +362,7 @@ def get_eventbrite_data(sources, service, options):
                     country_code,
                     latitude,
                     longitude,
-                    page["language_code"],
+                    page.get("language_code"),
                     online,
                     training,
                     sold_out,
