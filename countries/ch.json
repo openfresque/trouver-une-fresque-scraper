@@ -122,5 +122,23 @@
         "type": "scraper",
         "filter": "Fresque des frontières planétaires",
         "id": 500
+    },
+    {
+        "name": "Planet C Play Again?",
+        "url": "https://calendar.google.com/calendar/ical/2fe1be9f8d5c073969bccaba14133699b71305877304056bee924ee0ef128977%40group.calendar.google.com/public/basic.ics",
+        "type": "api",
+        "id": 800
+    },
+    {
+        "name": "Fresque du Sol",
+        "url": "https://framagenda.org/remote.php/dav/public-calendars/KwNwGA232xD38CnN/?export",
+        "type": "api",
+        "id": 801
+    },
+    {
+        "name": "Fresque des Déchets",
+        "url": "https://calendar.google.com/calendar/ical/greendonut.info%40gmail.com/public/basic.ics",
+        "type": "api",
+        "id": 802
     }
 ]
