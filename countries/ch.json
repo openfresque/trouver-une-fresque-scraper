@@ -134,11 +134,5 @@
         "url": "https://framagenda.org/remote.php/dav/public-calendars/KwNwGA232xD38CnN/?export",
         "type": "api",
         "id": 801
-    },
-    {
-        "name": "Fresque des Déchets",
-        "url": "https://calendar.google.com/calendar/ical/greendonut.info%40gmail.com/public/basic.ics",
-        "type": "api",
-        "id": 802
     }
 ]
