@@ -85,6 +85,12 @@
         "id": 14
     },
     {
+        "name": "Fresque des Déchets,
+        "url": "https://calendar.google.com/calendar/ical/greendonut.info%40gmail.com/public/basic.ics",
+        "type": "api",
+        "id": 15
+    },
+    {
         "name": "Puzzle Climat",
         "url": "https://www.billetweb.fr/multi_event.php?user=121600",
         "type": "scraper",
