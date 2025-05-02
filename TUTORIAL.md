@@ -66,6 +66,21 @@ Les évènements ne se tenant pas en France ne sont pas encore supportés.
 
 Voir le [tutoriel OpenStreetMap](TUTORIAL_OSM.md).
 
+## iCalendar / iCal / ICS
+
+Le format est supporté par un grand nombre de logiciels dont ceux énumérés sur https://fr.wikipedia.org/wiki/ICalendar. Voici comment obtenir le lien ICS pour deux d'entre eux:
+
+* [Framagenda](https://framagenda.org/): cliquez sur le menu à droite du nom du calendrier, cliquez sur le menu aà droite de "Partager le lien" puis choisissez l'option "Copier le lien pour s'abonner". Exemple: `https://framagenda.org/remote.php/dav/public-calendars/KwNwGA232xD38CnN/?export`.
+* [Google Calendar](https://calendar.google.com): cliquez sur le menu à droite du nom du calendrier, choisissez "Paramètres et Partage", deéfilez vers le bas pour trouver "Adresse publique au format iCal". Exemple: `https://calendar.google.com/calendar/ical/2fe1be9f8d5c073969bccaba14133699b71305877304056bee924ee0ef128977%40group.calendar.google.com/public/basic.ics`.
+
+### Adresse
+
+Voir le [tutoriel OpenStreetMap](TUTORIAL_OSM.md).
+
+### Lien d'inscription
+
+La description doit contenir le lien pour s'inscrire. Si la description continent plusieurs liens, les liens vers les plateformes de visio-conférence connues sont ignorés. Si il reste encore plusieurs liens, la description doit être au format HTML et un seul des liens doit contenir le mot "Inscriptions" ou un synonyme proche.
+
 ## Ouvrir une issue
 
 Si 1) après vérification de tous les points énoncés dans la section correspondante à votre plateforme de publication, et 2) après avoir attendu 4 jours, votre évènement n'apparaît toujours pas sur la plateforme Trouver une Fresque, merci de nous contacter en remplissant [ce formulaire](https://github.com/trouver-une-fresque/trouver-une-fresque/issues/new). Un compte [GitHub](https://github.com/signup) est nécessaire.
