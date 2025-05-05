@@ -153,6 +153,8 @@ def get_address(full_location):
             road = address["road"]
         elif "square" in address.keys():
             road = address["square"]
+        elif "park" in address.keys():
+            road = address["park"]
         else:
             raise FreskAddressBadFormat(address, full_location, "road")
 
