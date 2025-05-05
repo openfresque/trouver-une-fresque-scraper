@@ -166,6 +166,7 @@ def get_address(full_location):
         else:
             raise FreskAddressBadFormat(address, full_location, "city")
 
+        # Trying to infer the "department" code
         num_department = None
         if address["country_code"] == "fr":
             department = None
@@ -192,6 +193,10 @@ def get_address(full_location):
                 num_department = canton[3:]
             else:
                 raise FreskAddressBadFormat(address, full_location, "department")
+
+        # Missing fields
+        if "postcode" not in address:
+            raise FreskAddressIncomplete(address, full_location, "postcode")
 
     except FreskError as e:
         logging.error(f"get_address: {e}")
