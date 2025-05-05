@@ -28,7 +28,7 @@ def configure_logging(log_file_path, error_log_file_path):
 
     # Create a logger
     logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
 
     # Create a file handler for all levels of messages
     file_handler = logging.FileHandler(log_file_path)
