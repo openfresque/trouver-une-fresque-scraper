@@ -2,6 +2,7 @@ import csv
 import datetime
 import json
 import pytz
+import re
 import requests
 import logging
 
@@ -19,9 +20,11 @@ def get_ics_data(source):
 
     try:
         response = requests.get(source["url"])
-        # Check if the request was successful (status code 200)
+        # Check if the request was successful (status code 200).
         if response.status_code == 200:
-            calendar = Calendar(response.text)
+            # Remove VALARMs which incorrectly crash the ics library.
+            text = re.sub("BEGIN:VALARM.*END:VALARM", "", response.text, flags=re.DOTALL)
+            calendar = Calendar(text)
         else:
             logging.info(f"Request failed with status code: {response.status_code}")
     except requests.RequestException as e:
