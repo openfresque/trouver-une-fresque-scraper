@@ -7,12 +7,66 @@ import logging
 
 from db.records import get_record_dict
 from ics import Calendar
+import re
 from utils.errors import FreskError
 from utils.location import get_address
+import xml.etree.ElementTree as ET
+
+
+# from https://regexr.com/37i6s
+REGEX_URL = "https?:\\/\\/(?:www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b(?:[-a-zA-Z0-9()@:%_\\+.~#?&\\/=]*)"
+
+IGNORABLE_DOMAINS = [
+    "https://meet.google.com",
+    "https://support.google.com",
+    "https://us02web.zoom.us",
+]
+
+TICKETING_TEXT = ["registration", "ticket", "inscription"]
+
+
+# Returns a ticketing URL extracted from a description in plain text or formatted as HTML.
+def get_ticketing_url_from_description(description):
+    # list of tuples: (URL, anchor text if HTML document otherwise same URL)
+    links = []
+
+    try:
+        # try as HTML document
+        root = ET.fromstring(description)
+        for elem in root.findall(".//a[@href]"):
+            links.append((elem.get("href"), elem.text))
+    except ET.ParseError:
+        # fall back to plain text
+        for url in re.findall(REGEX_URL, description):
+            links.append((url, url))
+
+    def should_link_be_kept(link):
+        url = link[0]
+        for domain in IGNORABLE_DOMAINS:
+            if url.startswith(domain):
+                return False
+        return True
+
+    links = list(filter(should_link_be_kept, links))
+    if len(links) == 1:
+        return links[0][0]
+
+    def does_text_look_like_registration(link):
+        lower_text = link[1].upper()
+        for text in TICKETING_TEXT:
+            if lower_text.find(text) > -1:
+                return True
+        return False
+
+    links = list(filter(does_text_look_like_registration, links))
+    if len(links) == 1:
+        return links[0][0]
+
+    return None
 
 
 def get_ics_data(source):
-    logging.info("Getting data from ICS file in iCalendar format")
+    logging.info(f"Getting iCalendar data from {source['url']}")
 
     calendar = None
     records = []
@@ -88,13 +142,15 @@ def get_ics_data(source):
         kids = False
 
         ################################################################
-        # Get tickets link (more sophisticated parsing to be added later)
+        # Get tickets link: try URL else extract from description
         ################################################################
         tickets_link = event.url
-        source_link = tickets_link
+        if not tickets_link and event.description:
+            tickets_link = get_ticketing_url_from_description(event.description)
         if not tickets_link:
-            logging.info(f"Rejecting record {event_id}: no ticket link extracted.")
+            logging.warning(f"Rejecting record {event_id}: no ticket link extracted.")
             continue
+        source_link = tickets_link
 
         ################################################################
         # Building final object
