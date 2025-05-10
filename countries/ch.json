@@ -36,19 +36,11 @@
         "id": 3
     },
     {
-        "name": "Digital Puzzle",
-        "language": "de",
-        "url": "https://www.billetweb.fr/digital-collage-dach&multi=12991&language=en&color=5190F5&parent=1&language=en&color=5190F5",
-        "type": "scraper",
-        "iframe": "eventdigital-collage-dach",
-        "id": 3
-    },
-    {
         "name": "Digital Collage",
         "language": "en",
-        "url": "https://www.billetweb.fr/united-kingdom-digital-collage&multi=12991&language=en&color=5190F5&parent=1&language=en&color=5190F5",
+        "url": "https://www.billetweb.fr/multi_event.php?multi=12991",
         "type": "scraper",
-        "iframe": "eventunited-kingdom-digital-collage",
+        "iframe": "multi_event_list"
         "id": 3
     },
     {
