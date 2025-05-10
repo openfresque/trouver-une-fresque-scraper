@@ -3,6 +3,7 @@ import json
 import logging
 from datetime import timedelta
 
+from langdetect import detect
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.common.by import By
@@ -259,6 +260,11 @@ def get_billetweb_data(sources, service, options):
                     except FreskError as error:
                         logging.info(f"Rejecting record: {error}.")
                         continue
+
+                # Language?
+                # TODO: move to record construction once #53 is in
+                language_code = page.get("language_code", detect(title + description))
+                logging.info(f"LANGUAGE DETECTED: {language_code}")
 
                 # Training?
                 training = is_training(title)
