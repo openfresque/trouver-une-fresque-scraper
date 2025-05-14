@@ -11,8 +11,9 @@ from selenium.webdriver.support import expected_conditions as EC
 
 from db.records import get_record_dict
 from utils.date_and_time import get_dates
-from utils.errors import FreskError, FreskDateBadFormat
+from utils.errors import FreskError, FreskDateBadFormat, FreskLanguageNotRecognized
 from utils.keywords import *
+from utils.language import get_language_code
 from utils.location import get_address
 
 
@@ -82,6 +83,23 @@ def get_fdc_data(sources, service, options):
                     iframe = wait.until(EC.presence_of_element_located((By.TAG_NAME, "iframe")))
                     driver.switch_to.frame(iframe)
                     continue
+
+                ################################################################
+                # Workshop language
+                ################################################################
+                language_code = None
+                try:
+                    globe_in_event = driver.find_element(
+                        By.XPATH, '//div[contains(@class, "mb-3")]/i[contains(@class, "fa-globe")]'
+                    )
+                    parent = globe_in_event.find_element(By.XPATH, "..")
+                    language_code = get_language_code(parent.text)
+                except FreskLanguageNotRecognized as e:
+                    logging.warning(f"Unable to parse workshop language: {e}")
+                    language_code = None
+                except NoSuchElementException:
+                    logging.warning("Unable to find workshop language on the page.")
+                    language_code = None
 
                 ################################################################
                 # Is it an online event?
@@ -182,6 +200,7 @@ def get_fdc_data(sources, service, options):
                     country_code,
                     latitude,
                     longitude,
+                    language_code,
                     online,
                     training,
                     sold_out,

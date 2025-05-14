@@ -52,3 +52,9 @@ class FreskCountryNotSupported(FreskError):
             f'Address "{address}" is not located in a supported country (input: {input_str}).'
         )
         super().__init__(self.message)
+
+
+class FreskLanguageNotRecognized(FreskError):
+    def __init__(self, language_text: str):
+        self.message = f'Language "{language_text}" is not recognized.'
+        super().__init__(self.message)

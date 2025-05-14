@@ -46,7 +46,7 @@ def insert(conn, df, table, most_recent=False):
     cursor = conn.cursor()
     try:
         cursor.executemany(
-            "INSERT INTO %s(%s) VALUES (%%s, %%s, %%s, %%s, %%s, %%s, %%s, %%s, %%s, %%s, %%s, %%s, %%s, %%s, %%s, %%s, %%s, %%s, %%s, %%s, %%s, %%s, %%s)"
+            "INSERT INTO %s(%s) VALUES (%%s, %%s, %%s, %%s, %%s, %%s, %%s, %%s, %%s, %%s, %%s, %%s, %%s, %%s, %%s, %%s, %%s, %%s, %%s, %%s, %%s, %%s, %%s, %%s)"
             % (table, cols),
             tuples,
             returning=True,
