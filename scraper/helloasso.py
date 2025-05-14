@@ -214,7 +214,7 @@ def get_helloasso_data(sources, service, options):
                 country_code,
                 latitude,
                 longitude,
-                page.get("language_code"),
+                page.get("language_code", detect_language_code_from_title_and_description(title, description))
                 online,
                 training,
                 sold_out,

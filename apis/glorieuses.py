@@ -156,7 +156,7 @@ def get_glorieuses_data(source):
             country_code,
             latitude,
             longitude,
-            source.get("language_code"),
+            source.get("language_code", detect_language_code_from_title_and_description(title, description))
             online,
             training,
             sold_out,

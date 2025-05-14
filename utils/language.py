@@ -1,13 +1,10 @@
 import logging
 
 from utils.errors import FreskLanguageNotRecognized
+from langdetect import detect
 
 
-def get_language_code(language_text):
-    """
-    Returns the ISO 639-1 language code given a human-readable string such as "Français" or "English".
-    """
-    language_codes = {
+LANGUAGE_STRINGS = {
         "Allemand": "de",
         "Anglais": "en",
         "Deutsch": "de",
@@ -18,7 +15,21 @@ def get_language_code(language_text):
         "Français": "fr",
         "German": "de",
     }
-    language_code = language_codes.get(language_text)
+
+
+def detect_language_code_from_title_and_description(title, description):
+    title_upper = title.upper()
+    for language_string, language_code in LANGUAGE_STRINGS.items():
+        if language_string.upper() in title_upper:
+            return language_code
+    return detect(title + description)
+
+
+def get_language_code(language_text):
+    """
+    Returns the ISO 639-1 language code given a human-readable string such as "Français" or "English".
+    """
+    language_code = LANGUAGE_STRINGS.get(language_text)
     if not language_code:
         raise FreskLanguageNotRecognized(language_text)
     return language_code
