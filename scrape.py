@@ -28,7 +28,7 @@ def configure_logging(log_file_path, error_log_file_path):
 
     # Create a logger
     logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
 
     # Create a file handler for all levels of messages
     file_handler = logging.FileHandler(log_file_path)
@@ -122,13 +122,17 @@ if __name__ == "__main__":
         default=False,
         help="push the scraped results to db",
     )
+    parser.add_argument(
+        "--skip-dirty-check",
+        action="store_true",
+        default=False,
+        help="skips checking that the git repository is clean",
+    )
     args = parser.parse_args()
 
-    dirty = False
-
     # This scraper should be run from a clean state to ensure reproducibility
-    if is_git_repository_dirty():
-        dirty = True
+    dirty = is_git_repository_dirty()
+    if dirty and not args.skip_dirty_check:
         logging.warning("The git repository is dirty. Consider a clean state for reproducibility.")
         user_input = input("Do you want to continue? (y/n): ").strip().lower()
         if user_input != "y":

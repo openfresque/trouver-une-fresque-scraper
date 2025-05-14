@@ -178,8 +178,9 @@
     },
     {
         "name": "Fresque de l'Economie Circulaire",
-        "url": "https://www.lafresquedeleconomiecirculaire.com/",
+        "url": "https://www.billetweb.fr/multi_event.php?user=246258",
         "type": "scraper",
+        "iframe": "event41148",
         "id": 300
     },
     {

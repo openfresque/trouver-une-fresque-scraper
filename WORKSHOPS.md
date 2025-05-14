@@ -24,7 +24,7 @@ Développer et maintenir Trouver une Fresque nous prend beaucoup de temps et d'�
 | Fresque de l'Eau | https://www.billetweb.fr/multi_event.php?user=138110 | Scraping Billetweb | OK |
 | Atelier futurs proches | https://www.billetweb.fr/pro/futursproches | Scraping Billetweb | OK |
 | Fresque de la Diversité | https://www.billetweb.fr/multi_event.php?user=168799 | Scraping Billetweb | OK |
-| Fresque de l'Économie Circulaire | https://www.lafresquedeleconomiecirculaire.com | Scaping site custom | OK |
+| Fresque de l'Économie Circulaire | https://www.billetweb.fr/multi_event.php?user=246258 | Scaping Billetweb | OK |
 | Fresque du Textile | https://www.billetweb.fr/multi_event.php?user=166793 | Scraping Billetweb | OK |
 | Fresque des Déchets | https://www.billetweb.fr/multi_event.php?user=166793 | Scraping Billetweb | OK |
 | Fresque des Frontières Planétaires | https://1erdegre.glide.page/dl/6471c6 | Scraping Glide Pages | OK |

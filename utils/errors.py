@@ -32,6 +32,14 @@ class FreskAddressBadFormat(FreskError):
         super().__init__(self.message)
 
 
+class FreskAddressIncomplete(FreskError):
+    def __init__(self, address: str, input_str: str, missing_attribute: str):
+        self.message = (
+            f'Address "{address}" has a missing attribute {missing_attribute} (input: {input_str}).'
+        )
+        super().__init__(self.message)
+
+
 class FreskDepartmentNotFound(FreskError):
     def __init__(self, department: str):
         self.message = f"Department {department} not recognized."
