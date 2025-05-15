@@ -13,7 +13,7 @@ from db.records import get_record_dict
 from utils.date_and_time import get_dates
 from utils.errors import FreskError, FreskDateNotFound, FreskDateBadFormat
 from utils.keywords import *
-from utils.language import detect_language_code_from_title_and_description
+from utils.language import detect_language_code
 from utils.location import get_address
 
 
@@ -217,7 +217,7 @@ def get_helloasso_data(sources, service, options):
                 longitude,
                 page.get(
                     "language_code",
-                    detect_language_code_from_title_and_description(title, description),
+                    detect_language_code(title, description),
                 ),
                 online,
                 training,

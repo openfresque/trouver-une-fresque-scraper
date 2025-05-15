@@ -21,13 +21,13 @@ def run_tests():
         ),
         (
             "FdB ru",
-            "ONLINE BIODIVERSITY COLLAGE WORKSHOP (RU) - with Anna Antonyak (CET)",
+            "ONLINE BIODIVERSITY COLLAGE WORKSHOP (RU) - with Ivan Ivanovich (CET)",
             "Workshop in Russian Коллаж биоразнообразия — это увлекательный командный воркшоп, который помогает разобраться, почему биоразнообразие критически важно для жизни на Земле и что грозит нашей планете и людям на ней в случае его утраты. В формате совместной работы участники узнают:",
             "ru",
         ),
         (
             "FdN it",
-            "ONLINE DIGITAL COLLAGE WORKSHOPS IN ITALIAN - Sessione online con Stefania Dante e Corrado Romano",
+            "ONLINE DIGITAL COLLAGE WORKSHOPS IN ITALIAN - Sessione online con Mario Rossi e Corrado Romano",
             "Il Digital Collage è un workshop ludico e collaborativo. L'obiettivo del workshop è di sensibilizzare e formare i partecipanti sui problemi ambientali e sociali delle tecnologie digitali. Il workshop si propone anche di delineare soluzioni per una maggiore sostenibilità nelle tecnologie digitali e quindi ad aprire discussioni tra i partecipanti sull'argomento.",
             "it",
         ),
@@ -40,9 +40,7 @@ def run_tests():
     ]
     for test_case in test_cases:
         logging.info(f"Running {test_case[0]}")
-        actual = language.detect_language_code_from_title_and_description(
-            test_case[1], test_case[2]
-        )
+        actual = language.detect_language_code(test_case[1], test_case[2])
         if actual == test_case[3]:
             logging.info("Result matches")
         else:

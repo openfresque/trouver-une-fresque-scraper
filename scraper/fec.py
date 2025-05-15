@@ -17,7 +17,7 @@ from utils.errors import (
     FreskDateDifferentTimezone,
 )
 from utils.keywords import *
-from utils.language import detect_language_code_from_title_and_description
+from utils.language import detect_language_code
 from utils.location import get_address
 
 
@@ -236,7 +236,7 @@ def get_fec_data(sources, service, options):
                 longitude,
                 page.get(
                     "language_code",
-                    detect_language_code_from_title_and_description(title, description),
+                    detect_language_code(title, description),
                 ),
                 online,
                 training,

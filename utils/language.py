@@ -16,12 +16,14 @@ LANGUAGE_STRINGS = {
     "German": "de",
     "Italien": "it",
     "Italian": "it",
+    "Spanish": "es",
+    "Russian": "ru",
 }
 
 
-def detect_language_code_from_title_and_description(title, description):
+def detect_language_code(title, description):
     """
-    Returns the ISO 639-1 language code if the language is specified in the title, otherwise auto-detects from title and description.
+    Returns the language code of the language specified in the title if any, otherwise auto-detects from title and description.
     """
     title_upper = title.upper()
     for language_string, language_code in LANGUAGE_STRINGS.items():
@@ -30,6 +32,7 @@ def detect_language_code_from_title_and_description(title, description):
     language_code = detect(title + description)
     if language_code in LANGUAGE_STRINGS.values():
         return language_code
+    logging.warning(f"Unexpected language code: {language_code}.")
     return None
 
 
