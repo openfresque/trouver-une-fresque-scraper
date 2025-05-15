@@ -18,6 +18,7 @@ from db.records import get_record_dict
 from utils.date_and_time import get_dates
 from utils.errors import FreskError, FreskDateBadFormat, FreskDateNotFound
 from utils.keywords import *
+from utils.language import detect_language_code
 from utils.location import get_address
 
 
@@ -362,7 +363,10 @@ def get_eventbrite_data(sources, service, options):
                     country_code,
                     latitude,
                     longitude,
-                    page.get("language_code"),
+                    page.get(
+                        "language_code",
+                        detect_language_code(title, description),
+                    ),
                     online,
                     training,
                     sold_out,

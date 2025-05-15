@@ -15,15 +15,7 @@
     },
     {
         "name": "Fresque de la Biodiversité",
-        "url": "https://www.billetweb.fr/fresque-de-la-biodiversite-geneve",
-        "type": "scraper",
-        "iframe": "event17309",
-        "id": 2
-    },
-    {
-        "name": "Biodiversity Collage",
-        "language": "en",
-        "url": "https://www.billetweb.fr/biodiversity-collage-zurich-switzerland&multi=17309&margin=no_margin&color=99ad23&parent=fresquedelabiodiversite&margin=no_margin&color=99ad23A",
+        "url": "https://www.billetweb.fr/multi_event.php?user=82762",
         "type": "scraper",
         "iframe": "event17309",
         "id": 2
@@ -36,11 +28,10 @@
         "id": 3
     },
     {
-        "name": "Digital Collage",
-        "language": "en",
-        "url": "https://www.billetweb.fr/multi_event.php?multi=12991",
+        "name": "Fresque du Numérique",
+        "url": "https://www.billetweb.fr/pro/atelier-fresque-du-numerique",
         "type": "scraper",
-        "iframe": "multi_event_list"
+        "iframe": "event41180",
         "id": 3
     },
     {
@@ -147,6 +138,7 @@
     {
         "name": "Fresque de l'Economie Circulaire",
         "url": "https://www.billetweb.fr/pro/lafresquedeleconomiecirculaire",
+	"language_code": "fr",
         "type": "scraper",
         "id": 300
     },

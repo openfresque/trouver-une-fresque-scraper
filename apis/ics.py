@@ -10,6 +10,7 @@ from db.records import get_record_dict
 from ics import Calendar
 import re
 from utils.errors import FreskError
+from utils.language import detect_language_code
 from utils.location import get_address
 import xml.etree.ElementTree as ET
 
@@ -173,6 +174,9 @@ def get_ics_data(source):
             country_code,
             latitude,
             longitude,
+            source.get(
+                "language_code", detect_language_code(title, description)
+            ),
             online,
             training,
             sold_out,

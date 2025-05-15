@@ -8,6 +8,7 @@ from datetime import datetime
 from db.records import get_record_dict
 from utils.errors import FreskError
 from utils.keywords import *
+from utils.language import detect_language_code
 from utils.location import get_address
 
 
@@ -156,7 +157,9 @@ def get_glorieuses_data(source):
             country_code,
             latitude,
             longitude,
-            source.get("language_code"),
+            source.get(
+                "language_code", detect_language_code(title, description)
+            ),
             online,
             training,
             sold_out,
