@@ -63,6 +63,23 @@ FRENCH_MONTHS = {
 def get_dates(event_time):
     try:
         # ===================
+        # FdC English
+
+        # June 03, 2025, from 05:30pm to 09:30pm (Paris time)
+        if match := re.match(
+            r"(?P<date>\w+\s\d{2},\s\d{4})"
+            r",\sfrom\s"
+            r"(?P<start_time>\d{2}:\d{2}[ap]m)"
+            r"\sto\s"
+            r"(?P<end_time>\d{2}:\d{2}[ap]m)"
+            r"\s\(.*\stime\)",
+            event_time,
+        ):
+            event_start_datetime = parse(f"{match.group('date')} {match.group('start_time')}")
+            event_end_datetime = parse(f"{match.group('date')} {match.group('end_time')}")
+            return event_start_datetime, event_end_datetime
+
+        # ===================
         # Billetweb
 
         # Thu Oct 19, 2023 from 01:00 PM to 02:00 PM
@@ -134,9 +151,9 @@ def get_dates(event_time):
             return event_start_datetime, event_end_datetime
 
         # ===================
-        # FdC
+        # FdC French
 
-        # 16 mai 2025, de 18h30 à 21h30 (heure de Paris)
+        # French: 16 mai 2025, de 18h30 à 21h30 (heure de Paris)
         elif match := re.match(
             r"(?P<day>\d{1,2})\s"
             rf"(?P<month>{'|'.join(FRENCH_MONTHS.keys())})\s"
