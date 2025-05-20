@@ -20,6 +20,7 @@ create table "private"."events_future" (
     "address" character varying,
     "location_name" character varying,
     "full_location" character varying,
+    "language_code" character varying,
     "scrape_date" timestamp with time zone,
     "most_recent" boolean default false
 );
