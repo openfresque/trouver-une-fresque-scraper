@@ -1,10 +1,4 @@
 import psycopg
-import numpy as np
-import pandas as pd
-from time import sleep
-import json
-
-from utils.utils import get_config
 
 
 def update_most_recent(conn, table):

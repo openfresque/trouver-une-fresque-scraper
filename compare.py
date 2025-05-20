@@ -1,6 +1,6 @@
 import json
 import sys
-
+import logging
 from tabulate import tabulate
 
 workshop_types = {
@@ -37,6 +37,7 @@ workshop_types = {
     702: "FresqueDesPossibles",
     703: "FresqueDeLaCommunication",
     704: "Zoofresque",
+    801: "FresqueDuSol",
 }
 
 

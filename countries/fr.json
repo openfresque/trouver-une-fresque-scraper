@@ -246,5 +246,11 @@
         "url": "https://www.helloasso.com/associations/ajas-association-justice-animaux-savoie",
         "type": "scraper",
         "id": 704
+    },
+    {
+        "name": "Fresque du Sol",
+        "url": "https://framagenda.org/remote.php/dav/public-calendars/KwNwGA232xD38CnN/?export",
+        "type": "api",
+        "id": 801
     }
 ]

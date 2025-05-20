@@ -163,8 +163,8 @@ if __name__ == "__main__":
             file.write("\n" + "dirty" + "\n")
 
     # Logging
-    log_path = results_path / Path(f"log.txt")
-    errors_path = results_path / Path(f"error_log.txt")
+    log_path = results_path / Path("log.txt")
+    errors_path = results_path / Path("error_log.txt")
     configure_logging(log_path, errors_path)
 
     # Launch the scraper
