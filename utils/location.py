@@ -113,29 +113,39 @@ departments = {
 cache = {}
 
 
+def geocode_location_string(location_string):
+    """
+    Requests Nomatim to geocode an input string. All results are cached and
+    reused.
+    """
+    location = None
+    if location_string in cache:
+        location = cache[location_string]
+    else:
+        logging.info(f"Calling geocoder with {location_string}...")
+        location = geolocator.geocode(location_string, addressdetails=True)
+        cache[location_string] = location
+    return location
+
+
 def get_address(full_location):
     """
-    This function requests Nomatim to get structured location data from an
-    input string.
+    Gets structured location data from an input string, tries substrings if
+    relevant, verifies that the result is sufficiently precise (address or park
+    level) and returns a dictionnary with the address properties.
     """
     try:
         if not full_location:
             raise FreskAddressNotFound("")
 
-        if full_location in cache:
-            location = cache[full_location]
-        else:
-            location = geolocator.geocode(full_location, addressdetails=True)
-            if location is None and "," in full_location:
-                partial_location = full_location.split(",", 1)[1]
-                if partial_location in cache:
-                    location = cache[partial_location]
-                else:
-                    logging.warning(f"Retrying address parse with {partial_location}...")
-                    location = geolocator.geocode(partial_location, addressdetails=True)
-                    cache[partial_location] = location
-            cache[full_location] = location
-
+        location = geocode_location_string(full_location)
+        if location is None:
+            if "," in full_location:
+                location = geocode_location_string(full_location.split(",", 1)[1])
+        if location is None:
+            lines = full_location.splitlines()
+            if len(lines) > 1:
+                location = geocode_location_string("\n".join(lines[1:]))
         if location is None:
             raise FreskAddressNotFound(full_location)
 
