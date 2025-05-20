@@ -143,9 +143,9 @@ def get_address(full_location):
             if "," in full_location:
                 location = geocode_location_string(full_location.split(",", 1)[1])
         if location is None:
-            lines = full_location.splitlines()
+            lines = full_location.splitlines(keepends=True)
             if len(lines) > 1:
-                location = geocode_location_string("\n".join(lines[1:]))
+                location = geocode_location_string("".join(lines[1:]))
         if location is None:
             raise FreskAddressNotFound(full_location)
 
