@@ -50,9 +50,8 @@
     },
     {
         "name": "Fresque de la Mobilité",
-        "url": "https://www.billetweb.fr/pro/fresquedelamobilite",
-        "type": "scraper",
-        "iframe": "event11698",
+        "url": "https://app.fresquedelamobilite.org/",
+        "type": "api",
         "id": 7
     },
     {
