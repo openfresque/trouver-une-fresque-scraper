@@ -8,7 +8,7 @@ APIS_FNS = {
     "hook.eu1.make.com": get_glorieuses_data,
     "calendar.google.com/calendar/ical": get_ics_data,
     "framagenda.org/remote.php/dav": get_ics_data,
-    "app.fresquedelamobilite.org": get_mobilite_data
+    "app.fresquedelamobilite.org": get_mobilite_data,
 }
 
 
