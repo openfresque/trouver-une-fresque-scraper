@@ -36,10 +36,6 @@ def get_mobilite_data(source):
     df_versions = pd.json_normalize(json_versions["response"]["results"])
     df_sessions = df_sessions.merge(df_versions, how='left', left_on="atelier_version_custom_atelier_version", right_on="_id", suffixes=(None, "_y"))
 
-    # Suppress sessions if there are cancelled
-    if 'annulation_custom_annulation' in df_sessions.columns:
-        df_sessions = df_sessions[df_sessions['annulation_custom_annulation'].isnull()]
-
     for event_id, row in df_sessions.iterrows():
         logging.info("")
 
