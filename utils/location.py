@@ -1,5 +1,6 @@
 import logging
 
+from functools import lru_cache
 from utils.errors import *
 
 from geopy.geocoders import Nominatim
@@ -113,19 +114,14 @@ departments = {
 cache = {}
 
 
+@lru_cache(maxsize=None)
 def geocode_location_string(location_string):
     """
     Requests Nomatim to geocode an input string. All results are cached and
-    reused.
+    reused thanks to the @lru_cache decorator.
     """
-    location = None
-    if location_string in cache:
-        location = cache[location_string]
-    else:
-        logging.info(f"Calling geocoder with {location_string}...")
-        location = geolocator.geocode(location_string, addressdetails=True)
-        cache[location_string] = location
-    return location
+    logging.info(f"Calling geocoder: {location_string}")
+    return geolocator.geocode(location_string, addressdetails=True)
 
 
 def get_address(full_location):
