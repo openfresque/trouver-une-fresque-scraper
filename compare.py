@@ -37,6 +37,8 @@ workshop_types = {
     702: "FresqueDesPossibles",
     703: "FresqueDeLaCommunication",
     704: "Zoofresque",
+    705: "NotreTour",
+    800: "PlanetCPlayAgain?",
     801: "FresqueDuSol",
 }
 
