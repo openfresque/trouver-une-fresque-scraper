@@ -43,6 +43,8 @@ Développer et maintenir Trouver une Fresque nous prend beaucoup de temps et d'�
 | Fresque du Plastique | https://www.eventbrite.fr/o/la-fresque-du-plastique-45763194553 | Scraping Eventbrite | OK |
 | Cyber Fresque | https://www.eventbrite.fr/o/senscyb-89802295343 | Scraping Eventbrite | OK |
 | Fresque du Sol | https://fresquedusol.com/comment-participer/dates-a-venir/ | Calendrier ICS | OK |
+| Notre Tour | https://www.helloasso.com/associations/mush | Scraping HelloAsso | OK |
+| Planet C Play Again? | https://planetc.org/ | Calendrier ICS | OK |
 | Fresque de la Transition Energétique | https://fresques-tilleul.glide.page/dl/6471c6 | Scraping Glide Pages | Prévu, priorité 1 |
 | Pitch Climat | https://www.billetweb.fr/multi_event.php?user=186116 | Scraping Billetweb | Prévu, priorité 1 |
 | Fresque de l'Equité | https://www.fresquedelequite.fr/ | Scraping custom | Prévu, priorité 1 |
