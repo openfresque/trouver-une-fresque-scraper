@@ -1,6 +1,6 @@
-# trouver-une-fresque
+# trouver-une-fresque-scraper
 
-Trouver une Fresque est un outil open source permettant de détecter les ateliers disponibles dans votre département.
+Le scraper de Trouver une Fresque est un outil open source permettant de détecter les ateliers disponibles dans votre département.
 
 Les données sont extraites des billetteries officielles via la technique du scraping. La validité des adresses est vérifiée en utilisant les données d'OpenStreetMap.
 
@@ -18,61 +18,33 @@ Les ateliers actuellement supportés sont listés sur la [feuille de route](WORK
 
 Le scraping est effectué en utilisant Selenium, qui s'appuie sur geckodriver pour afficher les données à récupérer. Notre outil peut être installé sur un Raspberry Pi sans problème.
 
-### Avec `nix` (méthode recommandée)
+### Avec `flox` (méthode recommandée)
 
-Nix est un gestionnaire de paquets multiplateforme qui vise à permettre la reproducibilité, la robustesse, la portabilité et la stabilité des systèmes d'information.
+Flox est un gestionnaire de paquets multiplateforme qui vise à permettre la reproducibilité, la robustesse, la portabilité et la stabilité des systèmes d'information. Cette approche permet d'installer les paquets Python et dépendances système en une seule fois.
 
-#### Installer `nix`
+Suivez les instructions pour installer Flox sur votre système [ici](https://flox.dev/docs/install-flox/). Tout est prêt ! Utilisez la commande `flox activate` dans ce dossier pour commencer à développer.
 
-```bash
-### Via https://zero-to-nix.com/start/install (recommandé)
-curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
+### Manuellement avec `uv`
 
-### Via https://devenv.sh/getting-started/
-## Linux
-sh <(curl -L https://nixos.org/nix/install) --daemon
-
-## macOS
-sh <(curl -L https://nixos.org/nix/install)
-
-## Windows (WSL2)
-sh <(curl -L https://nixos.org/nix/install) --no-daemon
-```
-
-#### Installer `devenv`
-
-```bash
-## General
-nix-env -iA devenv -f https://github.com/NixOS/nixpkgs/tarball/nixpkgs-unstable
-
-## NixOS
-# Add the following to your configuration.nix somewhere
-environment.systemPackages = [ 
-  pkgs.devenv
-];
-```
-
-Tout est prêt ! Utilisez la commande `devenv shell` pour commencer à développer.
-
-### Manuellement
-
-Cette méthode d'installation n'est pas recommandée. Préférez l'utilisation de Nix, qui vous facilitera la tâche et garantira d'avoir toutes les dépendances nécessaires pour lancer le scraper.
+Cette méthode d'installation n'est pas recommandée. Préférez l'utilisation de Flox, qui vous facilitera la tâche et garantira d'avoir toutes les dépendances nécessaires pour lancer le scraper.
 
 Téléchargez la version la plus récente de [geckodriver](https://github.com/mozilla/geckodriver/releases), puis extrayez le binaire `geckodriver` dans un dossier `bin/` (ou n'importe où sur votre système).
 
 Les librairies suivantes doivent être installées sur votre système:
 
 ```console
-apt-get install firefox-esr libpq-dev python3-dev
+apt install firefox-esr libpq-dev python3-dev
 ```
 
-Enfin, téléchargez les dépendances du scraper :
+Enfin, suivez les instructions pour installer `uv` [ici](https://docs.astral.sh/uv/getting-started/installation/) et téléchargez les dépendances du scraper :
 
 ```console
-make install
+uv sync
 ```
 
 ## 🤖 Développeurs: utilisation
+
+Avant de contribuer au projet, assurez-vous d'avoir lu le document [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ### Configuration
 
@@ -90,7 +62,7 @@ Renommez le fichier de configuration `config.json.dist` en `config.json` et rens
 }
 ```
 
-Le champ `webdriver` est à renseigner avec le chemin vers le binaire `geckodriver` dans le cas d'une installation sans Nix (manuelle) uniquement.
+Le champ `webdriver` est à renseigner avec le chemin vers le binaire `geckodriver` dans le cas d'une installation sans Flox (= manuelle avec `uv` uniquement) uniquement.
 
 
 ### Lancer le scraping

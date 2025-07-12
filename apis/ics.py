@@ -89,7 +89,6 @@ def get_ics_data(source):
         return records
 
     for event in calendar.events:
-
         ################################################################
         # Kick out event early if it is in the past
         ################################################################
@@ -174,9 +173,7 @@ def get_ics_data(source):
             country_code,
             latitude,
             longitude,
-            source.get(
-                "language_code", detect_language_code(title, description)
-            ),
+            source.get("language_code", detect_language_code(title, description)),
             online,
             training,
             sold_out,

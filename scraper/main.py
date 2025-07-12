@@ -23,20 +23,24 @@ SCRAPER_FNS = {
 
 
 def get_webdriver_executable():
-    webdriver = get_config("webdriver")
-
-    if not webdriver:
-        webdriver = os.environ["WEBDRIVER_PATH"]
-
-    return webdriver
+    webdriver_path = get_config("webdriver")
+    if not webdriver_path and "WEBDRIVER_PATH" in os.environ:
+        webdriver_path = os.environ["WEBDRIVER_PATH"]
+    return webdriver_path
 
 
 def main(scrapers, headless=False):
     records = []
 
+    # geckodriver
     service = Service(executable_path=get_webdriver_executable())
+
+    # Firefox
     options = FirefoxOptions()
+    if "BROWSER_PATH" in os.environ:
+        options.binary_location = os.environ["BROWSER_PATH"]
     options.set_preference("intl.accept_languages", "en-us")
+
     if headless:
         options.add_argument("-headless")
 
