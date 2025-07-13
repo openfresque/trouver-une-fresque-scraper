@@ -4,7 +4,11 @@ import traceback
 from datetime import datetime, timedelta
 from dateutil.parser import parse
 
-from utils.errors import FreskError, FreskDateBadFormat, FreskDateDifferentTimezone
+from trouver_une_fresque_scraper.utils.errors import (
+    FreskError,
+    FreskDateBadFormat,
+    FreskDateDifferentTimezone,
+)
 
 DEFAULT_DURATION = 3
 CURRENT_YEAR = 2025

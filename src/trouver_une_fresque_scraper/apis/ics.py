@@ -6,12 +6,12 @@ import re
 import requests
 import logging
 
-from db.records import get_record_dict
+from trouver_une_fresque_scraper.db.records import get_record_dict
 from ics import Calendar
 import re
-from utils.errors import FreskError
-from utils.language import detect_language_code
-from utils.location import get_address
+from trouver_une_fresque_scraper.utils.errors import FreskError
+from trouver_une_fresque_scraper.utils.language import detect_language_code
+from trouver_une_fresque_scraper.utils.location import get_address
 import xml.etree.ElementTree as ET
 
 

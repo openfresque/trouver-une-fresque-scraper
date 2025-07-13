@@ -10,8 +10,8 @@ from datetime import datetime
 from pathlib import Path
 from psycopg.conninfo import make_conninfo
 
-from apis import main as main_apis
-from scraper import main as main_scraper
+from trouver_une_fresque_scraper.apis import main as main_apis
+from trouver_une_fresque_scraper.scraper import main as main_scraper
 
 
 def configure_logging(log_file_path, error_log_file_path):

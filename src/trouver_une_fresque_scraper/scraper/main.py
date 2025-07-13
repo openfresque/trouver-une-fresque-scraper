@@ -1,15 +1,15 @@
 import os
 import pandas as pd
 
-from scraper.fdc import get_fdc_data
-from scraper.fec import get_fec_data
-from scraper.billetweb import get_billetweb_data
-from scraper.eventbrite import get_eventbrite_data
-from scraper.glide import get_glide_data
-from scraper.helloasso import get_helloasso_data
+from trouver_une_fresque_scraper.scraper.fdc import get_fdc_data
+from trouver_une_fresque_scraper.scraper.fec import get_fec_data
+from trouver_une_fresque_scraper.scraper.billetweb import get_billetweb_data
+from trouver_une_fresque_scraper.scraper.eventbrite import get_eventbrite_data
+from trouver_une_fresque_scraper.scraper.glide import get_glide_data
+from trouver_une_fresque_scraper.scraper.helloasso import get_helloasso_data
 from selenium.webdriver.firefox.options import Options as FirefoxOptions
 from selenium.webdriver.firefox.service import Service
-from utils.utils import get_config
+from trouver_une_fresque_scraper.utils.utils import get_config
 
 SCRAPER_FNS = {
     "billetweb.fr": get_billetweb_data,

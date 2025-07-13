@@ -1,7 +1,7 @@
 import logging
 
 from functools import lru_cache
-from utils.errors import *
+from trouver_une_fresque_scraper.utils.errors import *
 
 from geopy.geocoders import Nominatim
 

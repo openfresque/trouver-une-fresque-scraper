@@ -2,7 +2,7 @@ from datetime import datetime
 import logging
 
 
-from utils import date_and_time
+from trouver_une_fresque_scraper.utils import date_and_time
 
 
 def run_tests():

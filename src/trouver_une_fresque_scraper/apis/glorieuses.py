@@ -5,11 +5,11 @@ import logging
 
 from datetime import datetime
 
-from db.records import get_record_dict
-from utils.errors import FreskError
-from utils.keywords import *
-from utils.language import detect_language_code
-from utils.location import get_address
+from trouver_une_fresque_scraper.db.records import get_record_dict
+from trouver_une_fresque_scraper.utils.errors import FreskError
+from trouver_une_fresque_scraper.utils.keywords import *
+from trouver_une_fresque_scraper.utils.language import detect_language_code
+from trouver_une_fresque_scraper.utils.location import get_address
 
 
 def get_glorieuses_data(source):

@@ -1,6 +1,6 @@
 import logging
 
-from apis import ics
+from trouver_une_fresque_scraper.apis import ics
 
 
 def run_tests():

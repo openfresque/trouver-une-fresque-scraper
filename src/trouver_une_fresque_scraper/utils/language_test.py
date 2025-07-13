@@ -1,7 +1,7 @@
 import logging
 
 
-from utils import language
+from trouver_une_fresque_scraper.utils import language
 
 
 def run_tests():

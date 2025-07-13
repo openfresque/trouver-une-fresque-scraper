@@ -67,9 +67,8 @@ Le champ `webdriver` est à renseigner avec le chemin vers le binaire `geckodriv
 
 ### Lancer le scraping
 
-
 ```console
-python scrape.py
+python -m trouver_une_fresque_scraper.scrape
 ```
 
 À la fin du scraping, un fichier JSON nommé avec le format `events_20230814_153752.json` est créé dans le dossier `results/`.
@@ -104,6 +103,13 @@ This command will perform the following actions:
     - A query identifies rows in the `events_scraped` table that do not have a corresponding entry in the `events_future` table.
     - For these rows, it finds the most recent `scrape_date` for each `id` and `workshop_type`.
     - It then updates the `most_recent` column to `TRUE` for these rows, but only if the `start_date` of the event is in the past.
+
+### Lancer les tests
+
+```console
+cd tests
+python scrape_tests.py
+```
 
 ## Comment contribuer
 

@@ -14,12 +14,16 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-from db.records import get_record_dict
-from utils.date_and_time import get_dates
-from utils.errors import FreskError, FreskDateBadFormat, FreskDateNotFound
-from utils.keywords import *
-from utils.language import detect_language_code
-from utils.location import get_address
+from trouver_une_fresque_scraper.db.records import get_record_dict
+from trouver_une_fresque_scraper.utils.date_and_time import get_dates
+from trouver_une_fresque_scraper.utils.errors import (
+    FreskError,
+    FreskDateBadFormat,
+    FreskDateNotFound,
+)
+from trouver_une_fresque_scraper.utils.keywords import *
+from trouver_une_fresque_scraper.utils.language import detect_language_code
+from trouver_une_fresque_scraper.utils.location import get_address
 
 
 def delete_cookies_overlay(driver):

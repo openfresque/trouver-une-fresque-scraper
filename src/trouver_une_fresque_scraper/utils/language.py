@@ -1,6 +1,6 @@
 import logging
 
-from utils.errors import FreskLanguageNotRecognized
+from trouver_une_fresque_scraper.utils.errors import FreskLanguageNotRecognized
 from langdetect import detect
 
 

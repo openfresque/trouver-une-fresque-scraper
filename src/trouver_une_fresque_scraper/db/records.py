@@ -1,7 +1,7 @@
 import pandas as pd
 
 from zoneinfo import ZoneInfo
-from utils.utils import get_config
+from trouver_une_fresque_scraper.utils.utils import get_config
 
 
 def get_record_dict(

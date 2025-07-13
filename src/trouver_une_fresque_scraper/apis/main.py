@@ -1,8 +1,8 @@
 import pandas as pd
 
-from apis.ics import get_ics_data
-from apis.glorieuses import get_glorieuses_data
-from apis.mobilite import get_mobilite_data
+from trouver_une_fresque_scraper.apis.ics import get_ics_data
+from trouver_une_fresque_scraper.apis.glorieuses import get_glorieuses_data
+from trouver_une_fresque_scraper.apis.mobilite import get_mobilite_data
 
 APIS_FNS = {
     "hook.eu1.make.com": get_glorieuses_data,

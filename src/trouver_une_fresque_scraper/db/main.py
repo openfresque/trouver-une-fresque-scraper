@@ -5,8 +5,8 @@ import psycopg
 
 from psycopg.conninfo import make_conninfo
 
-from db.etl import etl, insert, truncate
-from utils.utils import get_config
+from trouver_une_fresque_scraper.db.etl import etl, insert, truncate
+from trouver_une_fresque_scraper.utils.utils import get_config
 
 
 def main():

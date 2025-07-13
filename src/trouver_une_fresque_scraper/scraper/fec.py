@@ -1,5 +1,4 @@
 import json
-import re
 import time
 import logging
 
@@ -9,12 +8,17 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-from db.records import get_record_dict
-from utils.date_and_time import get_dates
-from utils.errors import FreskError, FreskDateNotFound, FreskDateBadFormat
-from utils.keywords import *
-from utils.language import detect_language_code
-from utils.location import get_address
+from trouver_une_fresque_scraper.db.records import get_record_dict
+from trouver_une_fresque_scraper.utils.date_and_time import get_dates
+from trouver_une_fresque_scraper.utils.errors import (
+    FreskError,
+    FreskDateBadFormat,
+    FreskDateNotFound,
+    FreskDateDifferentTimezone,
+)
+from trouver_une_fresque_scraper.utils.keywords import *
+from trouver_une_fresque_scraper.utils.language import detect_language_code
+from trouver_une_fresque_scraper.utils.location import get_address
 
 
 def scroll_to_bottom(driver):
@@ -42,51 +46,41 @@ def scroll_to_bottom(driver):
             break
 
 
-def get_helloasso_data(sources, service, options):
-    logging.info("Scraping data from helloasso.com")
+def get_fec_data(sources, service, options):
+    logging.info("Scraping data from lafresquedeleconomiecirculaire.com")
 
     driver = webdriver.Firefox(service=service, options=options)
 
     records = []
 
     for page in sources:
-        logging.info(f"==================\nProcessing page {page}")
+        logging.info("========================")
         driver.get(page["url"])
-        driver.implicitly_wait(5)
-        time.sleep(3)
+        driver.implicitly_wait(2)
 
         # Scroll to bottom to load all events
-        desired_y = 2300
-        window_h = driver.execute_script("return window.innerHeight")
-        window_y = driver.execute_script("return window.pageYOffset")
-        current_y = (window_h / 2) + window_y
-        scroll_y_by = desired_y - current_y
-        driver.execute_script("window.scrollBy(0, arguments[0]);", scroll_y_by)
-        time.sleep(5)
+        scroll_to_bottom(driver)
+        driver.execute_script("window.scrollTo(0, 0);")
 
-        try:
-            button = driver.find_element(
-                By.XPATH,
-                '//button[@data-ux="Explore_OrganizationPublicPage_Actions_ActionEvent_ShowAllActions"]',
-            )
-            button.click()
-        except NoSuchElementException:
-            pass
-
-        ele = driver.find_elements(By.CSS_SELECTOR, "a.ActionLink-Event")
+        ele = driver.find_elements(
+            By.CSS_SELECTOR, 'li[data-hook="events-card"] a[data-hook="title"]'
+        )
         links = [e.get_attribute("href") for e in ele]
-        num_el = len(ele)
-        logging.info(f"Found {num_el} elements")
+
+        # Only events published on lafresquedeleconomiecirculaire.com can be extracted
+        links = [l for l in links if "lafresquedeleconomiecirculaire.com" in l]
 
         for link in links:
             logging.info(f"\n-> Processing {link} ...")
             driver.get(link)
             driver.implicitly_wait(3)
+            time.sleep(5)
 
             ################################################################
             # Parse event id
             ################################################################
-            uuid = link.split("/")[-1]
+            # Define the regex pattern for UUIDs
+            uuid = link.split("/event-details/")[-1]
             if not uuid:
                 logging.info("Rejecting record: UUID not found")
                 continue
@@ -106,23 +100,30 @@ def get_helloasso_data(sources, service, options):
             try:
                 date_info_el = driver.find_element(
                     by=By.CSS_SELECTOR,
-                    value="span.CampaignHeader--Date",
+                    value='p[data-hook="event-full-date"]',
                 )
                 event_time = date_info_el.text
-            except NoSuchElementException as error:
-                logging.info(f"Reject record: {error}")
-                continue
+            except NoSuchElementException:
+                raise FreskDateNotFound
 
             try:
                 event_start_datetime, event_end_datetime = get_dates(event_time)
-            except Exception as e:
-                logging.info(f"Rejecting record: {e}")
+            except FreskDateBadFormat as error:
+                logging.info(f"Reject record: {error}")
                 continue
 
             ################################################################
             # Is it an online event?
             ################################################################
-            online = is_online(title)
+            online = False
+            try:
+                online_el = driver.find_element(
+                    By.CSS_SELECTOR, 'p[data-hook="event-full-location"]'
+                )
+                if is_online(online_el.text):
+                    online = True
+            except NoSuchElementException:
+                pass
 
             ################################################################
             # Location data
@@ -138,14 +139,9 @@ def get_helloasso_data(sources, service, options):
             country_code = ""
 
             if not online:
-                try:
-                    location_el = driver.find_element(
-                        By.CSS_SELECTOR, "section.CardAddress--Location"
-                    )
-                except NoSuchElementException:
-                    logging.info("Rejecting record: no location")
-                    continue
-
+                location_el = driver.find_element(
+                    By.CSS_SELECTOR, 'p[data-hook="event-full-location"]'
+                )
                 full_location = location_el.text
 
                 try:
@@ -167,13 +163,29 @@ def get_helloasso_data(sources, service, options):
             ################################################################
             # Description
             ################################################################
+            driver.execute_script("window.scrollBy(0, document.body.scrollHeight);")
+
+            # Click on "show more" button
+            try:
+                show_more_el = driver.find_element(
+                    By.CSS_SELECTOR, 'button[data-hook="about-section-button"]'
+                )
+                show_more_el.click()
+            except NoSuchElementException:
+                pass
+
             try:
                 description_el = driver.find_element(
-                    By.CSS_SELECTOR, "div.CampaignHeader--Description"
+                    By.CSS_SELECTOR, 'div[data-hook="about-section-text"]'
                 )
             except NoSuchElementException:
-                logging.info(f"Rejecting record: no description")
-                continue
+                try:
+                    description_el = driver.find_element(
+                        By.CSS_SELECTOR, 'div[data-hook="about-section"]'
+                    )
+                except NoSuchElementException:
+                    logging.info(f"Rejecting record: no description")
+                    continue
 
             description = description_el.text
 
@@ -185,7 +197,14 @@ def get_helloasso_data(sources, service, options):
             ################################################################
             # Is it full?
             ################################################################
-            sold_out = False
+            sold_out = True
+            try:
+                _ = driver.find_element(
+                    by=By.CSS_SELECTOR,
+                    value='div[data-hook="event-sold-out"]',
+                )
+            except NoSuchElementException:
+                sold_out = False
 
             ################################################################
             # Is it suited for kids?
@@ -224,7 +243,7 @@ def get_helloasso_data(sources, service, options):
                 sold_out,
                 kids,
                 link,
-                link,
+                tickets_link,
                 description,
             )
 
