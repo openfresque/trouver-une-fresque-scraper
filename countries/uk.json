@@ -1,0 +1,28 @@
+[
+    {
+        "name": "Circular Economy Collage",
+        "url": "https://www.lafresquedeleconomiecirculaire.com/en",
+        "type": "scraper",
+        "iframe": " ",
+        "id": 
+    },
+    {
+        "name": "Planetary Boundaries Fresco",
+        "url": "https://1erdegre.glide.page/dl/3b1bc8",
+        "type": "scraper",
+        "filter": "Fresque des frontières planétaires",
+        "id": 
+    },
+    {
+        "name": "Digital Collage",
+        "url": "https://www.billetweb.fr/united-kingdom-digital-collage",
+        "type": "scraper",
+        "id": 
+    },
+    {
+        "name": "Biodiversity Collage",
+        "url": "https://www.eventbrite.co.uk/o/biodiversity-collage-uk-86827707973",
+        "type": "scraper",
+        "id": 
+    }
+]
