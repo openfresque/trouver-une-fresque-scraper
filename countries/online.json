@@ -1,0 +1,31 @@
+[
+    {
+        "name": "Circular Economy Collage",
+        "url": "https://www.eventbrite.fr/o/fresque-de-leconomie-circulaire-68155531313",
+        "type": "scraper",
+        "filter": "Circular Economy Collage online",
+        "id": 
+    },
+    {
+        "name": "Planetary Boundaries Fresco",
+        "url": "https://1erdegre.glide.page/dl/3b1bc8",
+        "type": "scraper",
+        "filter": "Planetary Boundaries workshop",
+        "id": ,
+        "_comment": "The name of the event is highly editable, so it isn't always going to be the same, but 'Planetary Boundaries workshop' will be good enough most of the time!"
+    },
+    {
+        "name": "Digital Collage",
+        "url": "https://digitalcollage.org/citizens.html",
+        "_comment": "There are no examples of English workshops right now!"
+        "type": "scraper",
+        "id": 
+    },
+    {
+        "name": "Biodiversity Collage",
+        "url": "https://www.fresquedelabiodiversite.org/en.html#participer",
+        "_comment": "Would it be useful to have the original eventbrite rather than the webpage hosting an iframe?"
+        "type": "scraper",
+        "id": 
+    }
+]
