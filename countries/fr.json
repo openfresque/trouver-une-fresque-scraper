@@ -134,6 +134,13 @@
         "id": 18
     },
     {
+        "name": "Atelier des Transitions Urbaines",
+        "url": "https://www.billetweb.fr/multi_event.php?user=216884",
+        "type": "scraper",
+        "iframe": "event38980",
+        "id": 19
+    },
+    {
         "name": "2tonnes",
         "url": "https://www.eventbrite.fr/o/2-tonnes-29470123869",
         "type": "scraper",

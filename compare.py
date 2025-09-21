@@ -23,6 +23,7 @@ workshop_types = {
     16: "PuzzleClimat",
     17: "FresqueDeLaFinance",
     18: "FresqueDeLaRSE",
+    19: "AtelierDesTransitionsUrbaines",
     100: "2tonnes",
     101: "CompteGouttes",
     102: "FresqueDuBénévolat",

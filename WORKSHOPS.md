@@ -33,6 +33,7 @@ Développer et maintenir Trouver une Fresque nous prend beaucoup de temps et d'�
 | Atelier Horizons Décarbonés | https://1erdegre.glide.page/dl/6471c6 | Scraping Glide Pages | OK |
 | 2030 Glorieuses | https://www.2030glorieuses.org/event | API | OK |
 | Fresque de la RSE | https://www.billetweb.fr/multi_event.php?user=139214 | Scraping Billetweb | OK |
+| Atelier des Transitions Urbaines | https://www.billetweb.fr/multi_event.php?user=216884 | Scraping Billetweb | OK |
 | Fresque de la Rénovation | https://www.helloasso.com/associations/fresque-de-la-renovation/ | Scraping HelloAsso | OK |
 | Fresque de l'Energie | https://www.helloasso.com/associations/la-fresque-de-l-energie | Scraping HelloAsso | OK |
 | Fresque des Possibles | https://www.helloasso.com/associations/le-lieu-dit | Scraping HelloAsso | OK |
