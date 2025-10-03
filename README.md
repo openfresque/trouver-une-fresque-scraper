@@ -57,7 +57,7 @@ source trouver_une_fresque_scraper/bin/activate
 Installez le scraper avec:
 
 ```console
-uv pip install -e .
+uv sync
 ```
 
 Vérifiez que tout fonctionne:
