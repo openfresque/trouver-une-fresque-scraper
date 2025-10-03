@@ -542,23 +542,19 @@ wheels = [
 [[package]]
 name = "trouver-une-fresque"
 version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "geopy" },
     { name = "ics" },
     { name = "langdetect" },
     { name = "numpy" },
     { name = "pandas" },
+    { name = "pre-commit" },
     { name = "psycopg", extra = ["binary", "pool"] },
     { name = "python-dateutil" },
     { name = "requests" },
     { name = "selenium" },
     { name = "tabulate" },
-]
-
-[package.optional-dependencies]
-dev = [
-    { name = "pre-commit" },
 ]
 
 [package.metadata]
@@ -568,14 +564,13 @@ requires-dist = [
     { name = "langdetect" },
     { name = "numpy", specifier = ">=2.1.3" },
     { name = "pandas", specifier = ">=2.2.3" },
-    { name = "pre-commit", marker = "extra == 'dev'" },
+    { name = "pre-commit" },
     { name = "psycopg", extras = ["binary", "pool"], specifier = ">=3.2.3" },
     { name = "python-dateutil", specifier = ">=2.9.0.post0" },
     { name = "requests", specifier = ">=2.32.3" },
     { name = "selenium", specifier = ">=4.26.1" },
     { name = "tabulate", specifier = ">=0.9.0" },
 ]
-provides-extras = ["dev"]
 
 [[package]]
 name = "types-python-dateutil"

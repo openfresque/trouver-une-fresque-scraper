@@ -24,6 +24,12 @@ Flox est un gestionnaire de paquets multiplateforme qui vise à permettre la rep
 
 Suivez les instructions pour installer Flox sur votre système [ici](https://flox.dev/docs/install-flox/). Tout est prêt ! Utilisez la commande `flox activate` dans ce dossier pour commencer à développer.
 
+Vérifiez que tout fonctionne:
+
+```console
+python -c "import trouver_une_fresque_scraper as m; print(m.__file__)"
+```
+
 ### Manuellement avec `uv`
 
 Cette méthode d'installation n'est pas recommandée. Préférez l'utilisation de Flox, qui vous facilitera la tâche et garantira d'avoir toutes les dépendances nécessaires pour lancer le scraper.
@@ -36,10 +42,28 @@ Les librairies suivantes doivent être installées sur votre système:
 apt install firefox-esr libpq-dev python3-dev
 ```
 
-Enfin, suivez les instructions pour installer `uv` [ici](https://docs.astral.sh/uv/getting-started/installation/) et téléchargez les dépendances du scraper :
+Enfin, suivez les instructions pour installer `uv` [ici](https://docs.astral.sh/uv/getting-started/installation/) et créez un environnement Python:
 
 ```console
-uv sync
+uv venv trouver_une_fresque_scraper --python 3.13
+```
+
+Activez l'environnement:
+
+```console
+source trouver_une_fresque_scraper/bin/activate
+```
+
+Installez le scraper avec:
+
+```console
+uv pip install -e .
+```
+
+Vérifiez que tout fonctionne:
+
+```console
+python -c "import trouver_une_fresque_scraper as m; print(m.__file__)"
 ```
 
 ## 🤖 Développeurs: utilisation
@@ -69,6 +93,8 @@ Le champ `webdriver` est à renseigner avec le chemin vers le binaire `geckodriv
 
 ```console
 python -m trouver_une_fresque_scraper.scrape
+# or
+python -m trouver_une_fresque_scraper.scrape --headless --country ch --skip-dirty-check
 ```
 
 À la fin du scraping, un fichier JSON nommé avec le format `events_20230814_153752.json` est créé dans le dossier `results/`.
