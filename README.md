@@ -45,13 +45,13 @@ apt install firefox-esr libpq-dev python3-dev
 Enfin, suivez les instructions pour installer `uv` [ici](https://docs.astral.sh/uv/getting-started/installation/) et créez un environnement Python:
 
 ```console
-uv venv trouver_une_fresque_scraper --python 3.13
+uv venv .venv --python 3.13
 ```
 
 Activez l'environnement:
 
 ```console
-source trouver_une_fresque_scraper/bin/activate
+source .venv/bin/activate
 ```
 
 Installez le scraper avec:
