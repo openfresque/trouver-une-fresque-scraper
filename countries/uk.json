@@ -1,0 +1,27 @@
+[
+    {
+        "name": "Circular Economy Collage",
+        "url": "https://www.eventbrite.fr/o/fresque-de-leconomie-circulaire-68155531313",
+        "type": "scraper",
+        "id": 300
+    },
+    {
+        "name": "Planetary Boundaries Fresco",
+        "url": "https://1erdegre.glide.page/dl/3b1bc8",
+        "type": "scraper",
+        "filter": "Fresque des frontières planétaires",
+        "id": 500
+    },
+    {
+        "name": "Digital Collage",
+        "url": "https://www.billetweb.fr/multi_event.php?multi=12991",
+        "type": "scraper",
+        "id": 3
+    },
+    {
+        "name": "Biodiversity Collage",
+        "url": "https://www.billetweb.fr/multi_event.php?user=82762",
+        "type": "scraper",
+        "id": 2
+    }
+]
