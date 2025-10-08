@@ -14,14 +14,23 @@
     },
     {
         "name": "Digital Collage",
-        "url": "https://www.billetweb.fr/multi_event.php?multi=12991",
+        "url": "https://www.billetweb.fr/multi_event.php?multi=11442",
         "type": "scraper",
+        "iframe": "eventu84999",
+        "id": 3
+    },
+    {
+        "name": "Digital Collage",
+        "url": "https://www.billetweb.fr/pro/atelier-fresque-du-numerique",
+        "type": "scraper",
+        "iframe": "event41180",
         "id": 3
     },
     {
         "name": "Biodiversity Collage",
         "url": "https://www.billetweb.fr/multi_event.php?user=82762",
         "type": "scraper",
+        "iframe": "event17309",
         "id": 2
     }
 ]
