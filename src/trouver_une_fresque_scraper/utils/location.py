@@ -147,7 +147,7 @@ def get_address(full_location):
 
         address = location.raw["address"]
 
-        if address["country_code"] != "fr" and address["country_code"] != "ch":
+        if address["country_code"] != "fr" and address["country_code"] != "ch" and address["country_code"] != "gb":
             raise FreskCountryNotSupported(address, full_location)
 
         house_number = ""
@@ -227,3 +227,4 @@ def department_to_num(department):
         if v == department:
             return k
     raise FreskDepartmentNotFound(f"Department number.")
+
