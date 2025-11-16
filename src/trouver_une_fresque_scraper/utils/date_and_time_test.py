@@ -1,11 +1,12 @@
 from datetime import datetime
 import logging
+from attrs import define
 
 
 from trouver_une_fresque_scraper.utils import date_and_time
 
 
-def run_tests():
+def run_get_dates_tests():
     # tuple fields:
     # 1. Test case name or ID
     # 2. Input date string
@@ -80,3 +81,57 @@ def run_tests():
             logging.error(f"{test_case[0]}: expected {test_case[2]} but got {actual_start_time}")
         if actual_end_time != test_case[3]:
             logging.error(f"{test_case[0]}: expected {test_case[3]} but got {actual_end_time}")
+
+
+@define
+class MockWebDriverElement:
+    text: str
+    dt: str | None
+
+    def get_attribute(self, ignored: str) -> str | None:
+        return self.dt
+
+
+def run_get_dates_from_element_tests():
+    # tuple fields:
+    # 1. Test case name or ID
+    # 2. Input date string
+    # 3. Expected output start datetime
+    # 4. Expected output end datetime
+    test_cases = [
+        (
+            "BilletWeb: no datetime, fallback on text parsing",
+            None,
+            "Thu Oct 19, 2023 from 01:00 PM to 02:00 PM",
+            datetime(2023, 10, 19, 13, 0),
+            datetime(2023, 10, 19, 14, 0),
+        ),
+        (
+            "EventBrite: morning",
+            "2025-12-05",
+            "déc. 5 de 8am à 11am UTC",
+            datetime(2025, 12, 5, 8, 0),
+            datetime(2025, 12, 5, 11, 0),
+        ),
+        (
+            "EventBrite: evening",
+            "2025-12-12",
+            "déc. 12 de 6pm à 9pm UTC+1",
+            datetime(2025, 12, 12, 18, 0),
+            datetime(2025, 12, 12, 21, 0),
+        ),
+    ]
+    for test_case in test_cases:
+        logging.info(f"Running {test_case[0]}")
+        actual_start_time, actual_end_time = date_and_time.get_dates_from_element(
+            MockWebDriverElement(dt=test_case[1], text=test_case[2])
+        )
+        if actual_start_time != test_case[3]:
+            logging.error(f"{test_case[0]}: expected {test_case[3]} but got {actual_start_time}")
+        if actual_end_time != test_case[4]:
+            logging.error(f"{test_case[0]}: expected {test_case[4]} but got {actual_end_time}")
+
+
+def run_tests():
+    run_get_dates_tests()
+    run_get_dates_from_element_tests()

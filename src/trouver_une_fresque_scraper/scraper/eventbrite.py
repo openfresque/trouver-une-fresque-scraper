@@ -15,7 +15,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 from trouver_une_fresque_scraper.db.records import get_record_dict
-from trouver_une_fresque_scraper.utils.date_and_time import get_dates
+from trouver_une_fresque_scraper.utils.date_and_time import get_dates_from_element
 from trouver_une_fresque_scraper.utils.errors import (
     FreskError,
     FreskDateBadFormat,
@@ -184,12 +184,15 @@ def get_eventbrite_data(sources, service, options):
             ###########################################################
             # Is it an online event?
             ################################################################
-            online = False
-            try:
-                online_el = driver.find_element(By.CSS_SELECTOR, "p.location-info__address-text")
-                online = is_online(online_el.text)
-            except NoSuchElementException:
-                pass
+            online = is_online(title)
+            if not online:
+                try:
+                    online_el = driver.find_element(
+                        By.CSS_SELECTOR, "span.start-date-and-location__location"
+                    )
+                    online = is_online(online_el.text)
+                except NoSuchElementException:
+                    pass
 
             ################################################################
             # Location data
@@ -205,11 +208,10 @@ def get_eventbrite_data(sources, service, options):
             country_code = ""
 
             if not online:
-                location_el = driver.find_element(By.CSS_SELECTOR, "div.location-info__address")
-                full_location_text = location_el.text.split("\n")
-                location_name = full_location_text[0]
-                address_and_city = full_location_text[1]
-                full_location = f"{location_name}, {address_and_city}"
+                location_el = driver.find_element(
+                    By.CSS_SELECTOR, ".start-date-and-location__location"
+                )
+                full_location = location_el.text.replace("\n", ", ")
 
                 try:
                     address_dict = get_address(full_location)
@@ -231,7 +233,7 @@ def get_eventbrite_data(sources, service, options):
             # Description
             ################################################################
             try:
-                description_title_el = driver.find_element(By.CSS_SELECTOR, "div.eds-text--left")
+                description_title_el = driver.find_element(By.CSS_SELECTOR, "div.event-description")
                 description = description_title_el.text
             except NoSuchElementException:
                 logging.info("Rejecting record: Description not found.")
@@ -276,12 +278,13 @@ def get_eventbrite_data(sources, service, options):
                                 by=By.CSS_SELECTOR,
                                 value="span.date-info__full-datetime",
                             )
-                            event_time = date_info_el.text
                         except NoSuchElementException:
                             raise FreskDateNotFound
 
                         try:
-                            event_start_datetime, event_end_datetime = get_dates(event_time)
+                            event_start_datetime, event_end_datetime = get_dates_from_element(
+                                date_info_el
+                            )
                         except FreskDateBadFormat as error:
                             logging.info(f"Reject record: {error}")
                             continue
@@ -307,7 +310,12 @@ def get_eventbrite_data(sources, service, options):
 
                         if not already_scanned:
                             event_info.append(
-                                [uuid, event_start_datetime, event_end_datetime, tickets_link]
+                                [
+                                    uuid,
+                                    event_start_datetime,
+                                    event_end_datetime,
+                                    tickets_link,
+                                ]
                             )
 
             # There is only one event on this page.
@@ -320,13 +328,11 @@ def get_eventbrite_data(sources, service, options):
                         by=By.CSS_SELECTOR,
                         value="span.date-info__full-datetime",
                     )
-                    event_time = date_info_el.text
-                except NoSuchElementException as error:
-                    logging.info(f"Reject record: {error}")
-                    continue
+                except NoSuchElementException:
+                    raise FreskDateNotFound
 
                 try:
-                    event_start_datetime, event_end_datetime = get_dates(event_time)
+                    event_start_datetime, event_end_datetime = get_dates_from_element(date_info_el)
                 except FreskDateBadFormat as error:
                     logging.info(f"Reject record: {error}")
                     continue

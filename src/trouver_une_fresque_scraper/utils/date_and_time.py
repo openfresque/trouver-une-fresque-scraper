@@ -272,7 +272,7 @@ def get_dates(event_time):
                 FRENCH_MONTHS[match.group("month")],
                 int(match.group("day")),
                 int(start_parts[0]),
-                int(start_parts[1]) if len(start_parts) > 1 and len(start_parts[1]) else 0,
+                (int(start_parts[1]) if len(start_parts) > 1 and len(start_parts[1]) else 0),
             )
             end_parts = match.group("end_time").split("h")
             event_end_datetime = datetime(
@@ -291,3 +291,58 @@ def get_dates(event_time):
         if not isinstance(e, FreskError):
             traceback.print_exc()
         raise FreskDateBadFormat(event_time)
+
+
+def get_dates_from_element(el):
+    """Returns start and end datetime objects extracted from the element.
+
+    The "datetime" attribute of the element is used if present to extract the date, otherwise falls back on get_dates to parse the day and hours from the element text. Returns None, None on failure.
+
+    May throw FreskDateDifferentTimezone, FreskDateBadFormat and any exception thrown by get_dates.
+    """
+    event_day = el.get_attribute("datetime")
+    event_time = el.text
+
+    # Leverage the datetime attribute if present.
+    # datetime: 2025-12-05
+    # text: déc. 5 de 9am à 12pm UTC+1
+    if event_day:
+        day_match = re.match(r"(?P<year>\d{4})-(?P<month>\d{1,2})-(?P<day>\d{1,2})", event_day)
+        # TODO: add support for minutes not 0.
+        # TODO: add proper support for timezone.
+        # We use re.search to skip the text for the date at the beginning of the string.
+        hour_match = re.search(
+            r"de\s"
+            r"(?P<start_time>\d{1,2})(?P<start_am_or_pm>[ap]m)\s"
+            r"à\s"
+            r"(?P<end_time>\d{1,2})(?P<end_am_or_pm>[ap]m)\s"
+            r"(UTC(?P<timezone>.*))?",
+            event_time,
+        )
+        if day_match and hour_match:
+            timezone = hour_match.group("timezone")
+            if timezone and timezone not in ("+1", "+2"):
+                raise FreskDateDifferentTimezone(event_time)
+            hour_offset = 12
+            dt = datetime(
+                int(day_match.group("year")),
+                int(day_match.group("month")),
+                int(day_match.group("day")),
+            )
+            return datetime(
+                dt.year,
+                dt.month,
+                dt.day,
+                int(hour_match.group("start_time"))
+                + (12 if hour_match.group("start_am_or_pm") == "pm" else 0),
+                0,
+            ), datetime(
+                dt.year,
+                dt.month,
+                dt.day,
+                int(hour_match.group("end_time"))
+                + (12 if hour_match.group("end_am_or_pm") == "pm" else 0),
+                0,
+            )
+
+    return get_dates(event_time)
