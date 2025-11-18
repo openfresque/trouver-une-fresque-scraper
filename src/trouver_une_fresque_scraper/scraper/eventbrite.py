@@ -188,7 +188,7 @@ def get_eventbrite_data(sources, service, options):
             if not online:
                 try:
                     online_el = driver.find_element(
-                        By.CSS_SELECTOR, "span.start-date-and-location__location"
+                        By.CSS_SELECTOR, 'div[class^="Location-module__addressWrapper___"'
                     )
                     online = is_online(online_el.text)
                 except NoSuchElementException:
@@ -209,7 +209,7 @@ def get_eventbrite_data(sources, service, options):
 
             if not online:
                 location_el = driver.find_element(
-                    By.CSS_SELECTOR, ".start-date-and-location__location"
+                    By.CSS_SELECTOR, 'div[class^="Location-module__addressWrapper___"'
                 )
                 full_location = location_el.text.replace("\n", ", ")
 
@@ -276,7 +276,7 @@ def get_eventbrite_data(sources, service, options):
                         try:
                             date_info_el = driver.find_element(
                                 by=By.CSS_SELECTOR,
-                                value="span.date-info__full-datetime",
+                                value="time.start-date-and-location__date",
                             )
                         except NoSuchElementException:
                             raise FreskDateNotFound
@@ -326,7 +326,7 @@ def get_eventbrite_data(sources, service, options):
                 try:
                     date_info_el = driver.find_element(
                         by=By.CSS_SELECTOR,
-                        value="span.date-info__full-datetime",
+                        value="time.start-date-and-location__date",
                     )
                 except NoSuchElementException:
                     raise FreskDateNotFound
