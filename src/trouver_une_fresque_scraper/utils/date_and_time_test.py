@@ -120,6 +120,20 @@ def run_get_dates_from_element_tests():
             datetime(2025, 12, 12, 18, 0),
             datetime(2025, 12, 12, 21, 0),
         ),
+        (
+            "EventBrite: afternoon in German",
+            "2024-12-16",
+            "Dez. 16 von 5nachm. bis 8nachm. UTC",
+            datetime(2024, 12, 16, 17, 0),
+            datetime(2024, 12, 16, 20, 0),
+        ),
+        (
+            "EventBrite: afternoon with minutes in German",
+            "2024-12-03",
+            "Dez. 3 von 5:30nachm. bis 8:30nachm. UTC",
+            datetime(2024, 12, 3, 17, 30),
+            datetime(2024, 12, 3, 20, 30),
+        ),
     ]
     for test_case in test_cases:
         logging.info(f"Running {test_case[0]}")

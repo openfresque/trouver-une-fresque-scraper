@@ -1,5 +1,6 @@
 import re
 import traceback
+import logging
 
 from datetime import datetime, timedelta
 from dateutil.parser import parse
@@ -290,6 +291,7 @@ def get_dates(event_time):
     except Exception as e:
         if not isinstance(e, FreskError):
             traceback.print_exc()
+        logging.error(f"get_dates: {event_time}")
         raise FreskDateBadFormat(event_time)
 
 
@@ -303,46 +305,69 @@ def get_dates_from_element(el):
     event_day = el.get_attribute("datetime")
     event_time = el.text
 
-    # Leverage the datetime attribute if present.
-    # datetime: 2025-12-05
-    # text: déc. 5 de 9am à 12pm UTC+1
-    if event_day:
-        day_match = re.match(r"(?P<year>\d{4})-(?P<month>\d{1,2})-(?P<day>\d{1,2})", event_day)
-        # TODO: add support for minutes not 0.
-        # TODO: add proper support for timezone.
-        # We use re.search to skip the text for the date at the beginning of the string.
-        hour_match = re.search(
-            r"de\s"
-            r"(?P<start_time>\d{1,2})(?P<start_am_or_pm>[ap]m)\s"
-            r"à\s"
-            r"(?P<end_time>\d{1,2})(?P<end_am_or_pm>[ap]m)\s"
-            r"(UTC(?P<timezone>.*))?",
-            event_time,
-        )
-        if day_match and hour_match:
-            timezone = hour_match.group("timezone")
-            if timezone and timezone not in ("+1", "+2"):
-                raise FreskDateDifferentTimezone(event_time)
-            hour_offset = 12
-            dt = datetime(
-                int(day_match.group("year")),
-                int(day_match.group("month")),
-                int(day_match.group("day")),
-            )
-            return datetime(
-                dt.year,
-                dt.month,
-                dt.day,
-                int(hour_match.group("start_time"))
-                + (12 if hour_match.group("start_am_or_pm") == "pm" else 0),
-                0,
-            ), datetime(
-                dt.year,
-                dt.month,
-                dt.day,
-                int(hour_match.group("end_time"))
-                + (12 if hour_match.group("end_am_or_pm") == "pm" else 0),
-                0,
-            )
+    try:
+        # Leverage the datetime attribute if present.
+        # datetime: 2025-12-05
+        # text: déc. 5 de 9am à 12pm UTC+1
+        if event_day:
+            day_match = re.match(r"(?P<year>\d{4})-(?P<month>\d{1,2})-(?P<day>\d{1,2})", event_day)
 
-    return get_dates(event_time)
+            def PATTERN_TIME(hour_name, minute_name, pm_name):
+                return (
+                    r"(?P<"
+                    + hour_name
+                    + r">\d{1,2})(?P<"
+                    + minute_name
+                    + r">:\d{2})?(?P<"
+                    + pm_name
+                    + r">(am|pm|vorm.|nachm.))"
+                )
+
+            PATTERN_PM = ["pm", "nachm."]
+
+            # TODO: add proper support for timezone.
+            # We use re.search to skip the text for the date at the beginning of the string.
+            hour_match = re.search(
+                r"(de|von)\s"
+                + PATTERN_TIME("start_hour", "start_minute", "start_am_or_pm")
+                + r"\s"
+                + r"(à|bis)\s"
+                + PATTERN_TIME("end_hour", "end_minute", "end_am_or_pm")
+                + r"\s"
+                + r"(UTC(?P<timezone>.*))",
+                event_time,
+            )
+            if day_match and hour_match:
+                timezone = hour_match.group("timezone")
+                if timezone and timezone not in ("+1", "+2"):
+                    raise FreskDateDifferentTimezone(event_time)
+                dt = datetime(
+                    int(day_match.group("year")),
+                    int(day_match.group("month")),
+                    int(day_match.group("day")),
+                )
+                start_minute = hour_match.group("start_minute")
+                end_minute = hour_match.group("end_minute")
+                return datetime(
+                    dt.year,
+                    dt.month,
+                    dt.day,
+                    int(hour_match.group("start_hour"))
+                    + (12 if hour_match.group("start_am_or_pm") in PATTERN_PM else 0),
+                    int(start_minute[1:]) if start_minute else 0,
+                ), datetime(
+                    dt.year,
+                    dt.month,
+                    dt.day,
+                    int(hour_match.group("end_hour"))
+                    + (12 if hour_match.group("end_am_or_pm") in PATTERN_PM else 0),
+                    int(end_minute[1:]) if end_minute else 0,
+                )
+
+        return get_dates(event_time)
+
+    except Exception as e:
+        if not isinstance(e, FreskError):
+            traceback.print_exc()
+        logging.error(f"get_dates_from_element: {event_time}")
+        raise FreskDateBadFormat(event_time)
