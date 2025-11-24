@@ -187,10 +187,10 @@ def get_eventbrite_data(sources, service, options):
             online = is_online(title)
             if not online:
                 try:
-                    online_el = driver.find_element(
-                        By.CSS_SELECTOR, 'div[class^="Location-module__addressWrapper___"'
+                    short_location_el = driver.find_element(
+                        By.CSS_SELECTOR, "span.start-date-and-location__location"
                     )
-                    online = is_online(online_el.text)
+                    online = is_online(short_location_el.text)
                 except NoSuchElementException:
                     pass
 
@@ -208,10 +208,16 @@ def get_eventbrite_data(sources, service, options):
             country_code = ""
 
             if not online:
-                location_el = driver.find_element(
-                    By.CSS_SELECTOR, 'div[class^="Location-module__addressWrapper___"'
-                )
-                full_location = location_el.text.replace("\n", ", ")
+                try:
+                    full_location_el = driver.find_element(
+                        By.CSS_SELECTOR, 'div[class^="Location-module__addressWrapper___"'
+                    )
+                except NoSuchElementException:
+                    logging.error(
+                        f"Location element not found for offline event {link}.",
+                    )
+                    continue
+                full_location = full_location_el.text.replace("\n", ", ")
 
                 try:
                     address_dict = get_address(full_location)
@@ -320,6 +326,19 @@ def get_eventbrite_data(sources, service, options):
 
             # There is only one event on this page.
             except TimeoutException:
+                ################################################################
+                # Single event with multiple dates (a "collection").
+                ################################################################
+                try:
+                    check_availability_btn = driver.find_element(
+                        by=By.CSS_SELECTOR, value="button.check-availability-btn__button"
+                    )
+                    # TODO: add support for this.
+                    logging.error(f"EventBrite collection not supported in event {link}.")
+                    continue
+                except NoSuchElementException:
+                    pass
+
                 ################################################################
                 # Dates
                 ################################################################
