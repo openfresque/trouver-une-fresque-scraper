@@ -130,9 +130,23 @@ def run_get_dates_from_element_tests():
         (
             "EventBrite: afternoon with minutes in German",
             "2024-12-03",
-            "Dez. 3 von 5:30nachm. bis 8:30nachm. UTC",
+            "Dez. 3 von 5:30nachm. bis 8:30nachm. MEZ",
             datetime(2024, 12, 3, 17, 30),
             datetime(2024, 12, 3, 20, 30),
+        ),
+        (
+            "EventBrite: PM adds 12 to the hours only from 1 PM onwards",
+            "2025-12-14",
+            "déc. 14 de 9:30am à 12:30pm UTC+1",
+            datetime(2025, 12, 14, 9, 30),
+            datetime(2025, 12, 14, 12, 30),
+        ),
+        (
+            "EventBrite: start and end minutes differ",
+            "2026-01-21",
+            "janv. 21 de 9am à 12:30pm UTC+1",
+            datetime(2026, 1, 21, 9, 0),
+            datetime(2026, 1, 21, 12, 30),
         ),
     ]
     for test_case in test_cases:

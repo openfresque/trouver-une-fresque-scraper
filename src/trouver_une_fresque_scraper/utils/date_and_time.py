@@ -323,7 +323,18 @@ def get_dates_from_element(el):
                     + r">(am|pm|vorm.|nachm.))"
                 )
 
-            PATTERN_PM = ["pm", "nachm."]
+            def ParseTime(match_object, hour_name, minute_name, pm_name):
+                hour = int(match_object.group(hour_name))
+                PATTERN_PM = ["pm", "nachm."]
+                if match_object.group(pm_name) in PATTERN_PM and hour < 12:
+                    hour += 12
+
+                minute = 0
+                match_minute = hour_match.group(minute_name)
+                if match_minute:
+                    minute = int(match_minute[1:])
+
+                return hour, minute
 
             # TODO: add proper support for timezone.
             # We use re.search to skip the text for the date at the beginning of the string.
@@ -334,7 +345,7 @@ def get_dates_from_element(el):
                 + r"(à|bis)\s"
                 + PATTERN_TIME("end_hour", "end_minute", "end_am_or_pm")
                 + r"\s"
-                + r"(UTC(?P<timezone>.*))",
+                + r"((UTC|MEZ)(?P<timezone>.*))",
                 event_time,
             )
             if day_match and hour_match:
@@ -346,22 +357,14 @@ def get_dates_from_element(el):
                     int(day_match.group("month")),
                     int(day_match.group("day")),
                 )
-                start_minute = hour_match.group("start_minute")
-                end_minute = hour_match.group("end_minute")
-                return datetime(
-                    dt.year,
-                    dt.month,
-                    dt.day,
-                    int(hour_match.group("start_hour"))
-                    + (12 if hour_match.group("start_am_or_pm") in PATTERN_PM else 0),
-                    int(start_minute[1:]) if start_minute else 0,
-                ), datetime(
-                    dt.year,
-                    dt.month,
-                    dt.day,
-                    int(hour_match.group("end_hour"))
-                    + (12 if hour_match.group("end_am_or_pm") in PATTERN_PM else 0),
-                    int(end_minute[1:]) if end_minute else 0,
+                start_hour, start_minute = ParseTime(
+                    hour_match, "start_hour", "start_minute", "start_am_or_pm"
+                )
+                end_hour, end_minute = ParseTime(
+                    hour_match, "end_hour", "end_minute", "end_am_or_pm"
+                )
+                return datetime(dt.year, dt.month, dt.day, start_hour, start_minute), datetime(
+                    dt.year, dt.month, dt.day, end_hour, end_minute
                 )
 
         return get_dates(event_time)
