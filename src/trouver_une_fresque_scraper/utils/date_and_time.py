@@ -1,5 +1,6 @@
 import re
 import traceback
+import logging
 
 from datetime import datetime, timedelta
 from dateutil.parser import parse
@@ -272,7 +273,7 @@ def get_dates(event_time):
                 FRENCH_MONTHS[match.group("month")],
                 int(match.group("day")),
                 int(start_parts[0]),
-                int(start_parts[1]) if len(start_parts) > 1 and len(start_parts[1]) else 0,
+                (int(start_parts[1]) if len(start_parts) > 1 and len(start_parts[1]) else 0),
             )
             end_parts = match.group("end_time").split("h")
             event_end_datetime = datetime(
@@ -290,4 +291,86 @@ def get_dates(event_time):
     except Exception as e:
         if not isinstance(e, FreskError):
             traceback.print_exc()
+        logging.error(f"get_dates: {event_time}")
+        raise FreskDateBadFormat(event_time)
+
+
+def get_dates_from_element(el):
+    """Returns start and end datetime objects extracted from the element.
+
+    The "datetime" attribute of the element is used if present to extract the date, otherwise falls back on get_dates to parse the day and hours from the element text. Returns None, None on failure.
+
+    May throw FreskDateDifferentTimezone, FreskDateBadFormat and any exception thrown by get_dates.
+    """
+    event_day = el.get_attribute("datetime")
+    event_time = el.text
+
+    try:
+        # Leverage the datetime attribute if present.
+        # datetime: 2025-12-05
+        # text: déc. 5 de 9am à 12pm UTC+1
+        if event_day:
+            day_match = re.match(r"(?P<year>\d{4})-(?P<month>\d{1,2})-(?P<day>\d{1,2})", event_day)
+
+            def PATTERN_TIME(hour_name, minute_name, pm_name):
+                return (
+                    r"(?P<"
+                    + hour_name
+                    + r">\d{1,2})(?P<"
+                    + minute_name
+                    + r">:\d{2})?(?P<"
+                    + pm_name
+                    + r">(am|pm|vorm.|nachm.))"
+                )
+
+            def ParseTime(match_object, hour_name, minute_name, pm_name):
+                hour = int(match_object.group(hour_name))
+                PATTERN_PM = ["pm", "nachm."]
+                if match_object.group(pm_name) in PATTERN_PM and hour < 12:
+                    hour += 12
+
+                minute = 0
+                match_minute = hour_match.group(minute_name)
+                if match_minute:
+                    minute = int(match_minute[1:])
+
+                return hour, minute
+
+            # TODO: add proper support for timezone.
+            # We use re.search to skip the text for the date at the beginning of the string.
+            hour_match = re.search(
+                r"(de|von)\s"
+                + PATTERN_TIME("start_hour", "start_minute", "start_am_or_pm")
+                + r"\s"
+                + r"(à|bis)\s"
+                + PATTERN_TIME("end_hour", "end_minute", "end_am_or_pm")
+                + r"\s"
+                + r"((UTC|MEZ)(?P<timezone>.*))",
+                event_time,
+            )
+            if day_match and hour_match:
+                timezone = hour_match.group("timezone")
+                if timezone and timezone not in ("+1", "+2"):
+                    raise FreskDateDifferentTimezone(event_time)
+                dt = datetime(
+                    int(day_match.group("year")),
+                    int(day_match.group("month")),
+                    int(day_match.group("day")),
+                )
+                start_hour, start_minute = ParseTime(
+                    hour_match, "start_hour", "start_minute", "start_am_or_pm"
+                )
+                end_hour, end_minute = ParseTime(
+                    hour_match, "end_hour", "end_minute", "end_am_or_pm"
+                )
+                return datetime(dt.year, dt.month, dt.day, start_hour, start_minute), datetime(
+                    dt.year, dt.month, dt.day, end_hour, end_minute
+                )
+
+        return get_dates(event_time)
+
+    except Exception as e:
+        if not isinstance(e, FreskError):
+            traceback.print_exc()
+        logging.error(f"get_dates_from_element: {event_time}")
         raise FreskDateBadFormat(event_time)
