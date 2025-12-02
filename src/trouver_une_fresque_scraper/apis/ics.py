@@ -24,7 +24,7 @@ IGNORABLE_DOMAINS = [
     "https://us02web.zoom.us",
 ]
 
-TICKETING_TEXT = ["registration", "ticket", "inscription"]
+TICKETING_TEXT = ["billetterie", "registration", "ticket", "inscription"]
 
 
 # Returns a ticketing URL extracted from a description in plain text or formatted as HTML.
@@ -89,12 +89,15 @@ def get_ics_data(source):
         return records
 
     for event in calendar.events:
+        logging.info(f"Processing event {event.name}")
+
         ################################################################
         # Kick out event early if it is in the past
         ################################################################
         event_start_datetime = event.begin
         event_end_datetime = event.end
         if event_start_datetime < pytz.UTC.localize(datetime.datetime.now()):
+            logging.info(f"Rejecting record: start time before now.")
             continue
 
         ################################################################
@@ -118,6 +121,13 @@ def get_ics_data(source):
         country_code = ""
 
         online = event.location == None
+        if not online:
+           location = event.location.lstrip()
+           for domain in IGNORABLE_DOMAINS:
+               if location.startswith(domain):
+                   online = True
+                   break
+
         if not online:
             try:
                 full_location = event.location
