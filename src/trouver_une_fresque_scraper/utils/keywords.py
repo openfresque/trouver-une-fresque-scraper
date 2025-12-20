@@ -14,7 +14,7 @@ def is_training(input_string):
 
 
 def is_online(input_string):
-    online_list = ["online", "en ligne", "distanciel"]
+    online_list = ["online", "en ligne", "distanciel", "en linea"]
     input_string = input_string.lower()
     return any(word.lower() in input_string for word in online_list)
 
