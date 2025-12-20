@@ -1,4 +1,5 @@
 import logging
+import re
 
 from functools import lru_cache
 from trouver_une_fresque_scraper.utils.errors import *
@@ -135,6 +136,9 @@ def get_address(full_location):
             raise FreskAddressNotFound("")
 
         location = geocode_location_string(full_location)
+        if location is None:
+            full_location = re.sub(r"\(.*\)", "", full_location)
+            location = geocode_location_string(full_location)
         if location is None:
             if "," in full_location:
                 location = geocode_location_string(full_location.split(",", 1)[1])
