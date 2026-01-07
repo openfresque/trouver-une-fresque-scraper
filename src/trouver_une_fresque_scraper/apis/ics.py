@@ -108,6 +108,17 @@ def get_ics_data(source):
         description = event.description
 
         ################################################################
+        # Override workshop type if specified in the event
+        ################################################################
+        CATEGORY_PREFIX = "Workshop ID: "
+        workshop_id = source["id"]
+        for category in event.categories:
+            if category.startswith(CATEGORY_PREFIX):
+                workshop_id = int(category[len(CATEGORY_PREFIX) :])
+                logging.info(f"Workshop ID override: {workshop_id}")
+                break
+
+        ################################################################
         # Location data, or online
         ################################################################
         full_location = ""
@@ -122,11 +133,11 @@ def get_ics_data(source):
 
         online = event.location == None
         if not online:
-           location = event.location.lstrip()
-           for domain in IGNORABLE_DOMAINS:
-               if location.startswith(domain):
-                   online = True
-                   break
+            location = event.location.lstrip()
+            for domain in IGNORABLE_DOMAINS:
+                if location.startswith(domain):
+                    online = True
+                    break
 
         if not online:
             try:
@@ -169,8 +180,8 @@ def get_ics_data(source):
         # Building final object
         ################################################################
         record = get_record_dict(
-            f"{source['id']}-{event_id}",
-            source["id"],
+            f"{workshop_id}-{event_id}",
+            workshop_id,
             title,
             event_start_datetime,
             event_end_datetime,
