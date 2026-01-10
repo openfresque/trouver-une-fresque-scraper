@@ -127,6 +127,40 @@ def get_dates(event_time):
         # ===================
         # Eventbrite
 
+        # Sat, Feb 14 9:00 am - 12:30 pm
+        # Mon, Jan 20 6:00 pm - 9:30 pm
+        elif match := re.match(
+            r"(?P<day_of_week>\w{3}),\s"
+            r"(?P<month>\w{3})\s"
+            r"(?P<day>\d{1,2})\s"
+            r"(?P<start_time>\d{1,2}:\d{2}\s[ap]m)\s"
+            r"-\s"
+            r"(?P<end_time>\d{1,2}:\d{2}\s[ap]m)",
+            event_time,
+        ):
+            # Use current year or next year if month has passed
+            current_date = datetime.now()
+            month_abbr = match.group("month")
+            day = int(match.group("day"))
+
+            # Parse the month abbreviation
+            temp_date = parse(f"{month_abbr} {day}")
+            year = current_date.year
+
+            # If the parsed month/day is before current date, assume next year
+            if temp_date.replace(year=year) < current_date:
+                year += 1
+
+            # Parse full start and end times with inferred year
+            date_str = f"{month_abbr} {day} {year}"
+            event_start_datetime = parse(f"{date_str} {match.group('start_time')}")
+            event_end_datetime = parse(f"{date_str} {match.group('end_time')}")
+
+            return event_start_datetime, event_end_datetime
+
+        # ===================
+        # Eventbrite
+
         # ven. 11 avr. 2025 14:00 - 17:30 CEST
         elif match := re.match(
             rf"(?P<day_of_week>{'|'.join(FRENCH_SHORT_DAYS.keys())})\.?\s"
