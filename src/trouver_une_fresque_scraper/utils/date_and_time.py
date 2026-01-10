@@ -125,7 +125,77 @@ def get_dates(event_time):
             return event_start_datetime, event_end_datetime
 
         # ===================
-        # Eventbrite
+        # Eventbrite collection modal - calendar style (English)
+
+        # SAT, January 24 9:00 am
+        # WED, February 28 6:30 pm
+        elif match := re.match(
+            r"(?P<day_of_week>\w{3}),\s"
+            r"(?P<month>\w+)\s"
+            r"(?P<day>\d{1,2})\s"
+            r"(?P<start_time>\d{1,2}:\d{2}\s[ap]m)",
+            event_time,
+        ):
+            # Use current year or next year if month has passed
+            current_date = datetime.now()
+            month_name = match.group("month")
+            day = int(match.group("day"))
+
+            # Parse the month name
+            temp_date = parse(f"{month_name} {day}")
+            year = current_date.year
+
+            # If the parsed month/day is before current date, assume next year
+            if temp_date.replace(year=year) < current_date:
+                year += 1
+
+            # Parse full start time with inferred year and add default duration for end
+            date_str = f"{month_name} {day} {year}"
+            event_start_datetime = parse(f"{date_str} {match.group('start_time')}")
+            event_end_datetime = event_start_datetime + timedelta(hours=DEFAULT_DURATION)
+
+            return event_start_datetime, event_end_datetime
+
+        # ===================
+        # Eventbrite collection modal - calendar style (French)
+
+        # MER., janvier 14 6:30 pm
+        # SAM., janvier 17 2:00 pm
+        # JEU., janvier 22 6:30 pm
+        elif match := re.match(
+            rf"(?P<day_of_week>{'|'.join(FRENCH_SHORT_DAYS.keys()).upper()})\.?,?\s"
+            rf"(?P<month>{'|'.join(FRENCH_MONTHS.keys())})\s"
+            r"(?P<day>\d{1,2})\s"
+            r"(?P<start_time>\d{1,2}:\d{2}\s[ap]m)",
+            event_time,
+            re.IGNORECASE,
+        ):
+            current_date = datetime.now()
+            month_name = match.group("month").lower()
+            day = int(match.group("day"))
+
+            # Get month number from French name
+            month_num = FRENCH_MONTHS.get(month_name)
+            if not month_num:
+                raise FreskDateBadFormat(event_time)
+
+            # Determine year
+            year = current_date.year
+            temp_date = datetime(year, month_num, day)
+
+            # If the date is before current date, assume next year
+            if temp_date < current_date:
+                year += 1
+
+            # Build date string and parse with time
+            date_str = f"{year}-{month_num:02d}-{day:02d}"
+            event_start_datetime = parse(f"{date_str} {match.group('start_time')}")
+            event_end_datetime = event_start_datetime + timedelta(hours=DEFAULT_DURATION)
+
+            return event_start_datetime, event_end_datetime
+
+        # ===================
+        # Eventbrite collection modal - list style (English)
 
         # Sat, Feb 14 9:00 am - 12:30 pm
         # Mon, Jan 20 6:00 pm - 9:30 pm
@@ -153,6 +223,45 @@ def get_dates(event_time):
 
             # Parse full start and end times with inferred year
             date_str = f"{month_abbr} {day} {year}"
+            event_start_datetime = parse(f"{date_str} {match.group('start_time')}")
+            event_end_datetime = parse(f"{date_str} {match.group('end_time')}")
+
+            return event_start_datetime, event_end_datetime
+
+        # ===================
+        # Eventbrite collection modal - list style (French)
+
+        # jeu., févr. 26 6:30 pm - 9:45 pm
+        # lun., janv. 20 6:00 pm - 9:30 pm
+        elif match := re.match(
+            rf"(?P<day_of_week>{'|'.join(FRENCH_SHORT_DAYS.keys())})\.?,?\s"
+            rf"(?P<month>{'|'.join(FRENCH_SHORT_MONTHS.keys())})\.?\s"
+            r"(?P<day>\d{1,2})\s"
+            r"(?P<start_time>\d{1,2}:\d{2}\s[ap]m)\s"
+            r"-\s"
+            r"(?P<end_time>\d{1,2}:\d{2}\s[ap]m)",
+            event_time,
+            re.IGNORECASE,
+        ):
+            current_date = datetime.now()
+            month_abbr = match.group("month").lower()
+            day = int(match.group("day"))
+
+            # Get month number from French abbreviation
+            month_num = FRENCH_SHORT_MONTHS.get(month_abbr)
+            if not month_num:
+                raise FreskDateBadFormat(event_time)
+
+            # Determine year
+            year = current_date.year
+            temp_date = datetime(year, month_num, day)
+
+            # If the date is before current date, assume next year
+            if temp_date < current_date:
+                year += 1
+
+            # Build date string and parse with times
+            date_str = f"{year}-{month_num:02d}-{day:02d}"
             event_start_datetime = parse(f"{date_str} {match.group('start_time')}")
             event_end_datetime = parse(f"{date_str} {match.group('end_time')}")
 
