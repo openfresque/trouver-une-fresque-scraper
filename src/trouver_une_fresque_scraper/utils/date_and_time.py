@@ -12,7 +12,7 @@ from trouver_une_fresque_scraper.utils.errors import (
 )
 
 DEFAULT_DURATION = 3
-CURRENT_YEAR = 2025
+CURRENT_YEAR = 2026
 
 FRENCH_SHORT_DAYS = {
     "lun": 1,
