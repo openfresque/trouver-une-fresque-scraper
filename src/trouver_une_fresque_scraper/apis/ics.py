@@ -27,9 +27,13 @@ IGNORABLE_DOMAINS = [
 TICKETING_TEXT = ["billetterie", "registration", "ticket", "inscription"]
 
 
-# Returns a ticketing URL extracted from a description in plain text or formatted as HTML.
 def get_ticketing_url_from_description(description):
-    # list of tuples: (URL, anchor text if HTML document otherwise same URL)
+    """
+    Returns a ticketing URL extracted from a description in plain text or formatted as HTML.
+
+    Returns:
+        list of tuples: (URL, anchor text if HTML document otherwise same URL)
+    """
     links = []
 
     try:
@@ -64,6 +68,20 @@ def get_ticketing_url_from_description(description):
     if len(links) == 1:
         return links[0][0]
 
+    return None
+
+
+def get_suffix_from_strings(strings, prefix):
+    """
+    Searches for a string starting with the given prefix and returns the rest of the string.
+
+    Args:
+      strings: list of strings.
+      prefix: a substring, for example "Workshop ID: " or "lang=".
+    """
+    for s in strings:
+        if s.startswith(prefix):
+            return s.replace(prefix, "")
     return None
 
 
@@ -110,13 +128,14 @@ def get_ics_data(source):
         ################################################################
         # Override workshop type if specified in the event
         ################################################################
-        CATEGORY_PREFIX = "Workshop ID: "
-        workshop_id = source["id"]
-        for category in event.categories:
-            if category.startswith(CATEGORY_PREFIX):
-                workshop_id = int(category[len(CATEGORY_PREFIX) :])
-                logging.info(f"Workshop ID override: {workshop_id}")
-                break
+        workshop_id = get_suffix_from_strings(event.categories, "Workshop ID: ")
+        if workshop_id:
+            workshop_id = int(workshop_id)
+            if workshop_id == 0:
+                logging.info(f"Rejecting record: workshop ID unknown.")
+                continue
+        else:
+            workshop_id = source["id"]
 
         ################################################################
         # Location data, or online
@@ -177,6 +196,15 @@ def get_ics_data(source):
         source_link = tickets_link
 
         ################################################################
+        # Get language from registry, override or language code detection.
+        ################################################################
+        language_code = source.get(
+            "language_code", get_suffix_from_strings(event.categories, "Language: ")
+        )
+        if language_code is None:
+            language_code = detect_language_code(title, description)
+
+        ################################################################
         # Building final object
         ################################################################
         record = get_record_dict(
@@ -194,7 +222,7 @@ def get_ics_data(source):
             country_code,
             latitude,
             longitude,
-            source.get("language_code", detect_language_code(title, description)),
+            language_code,
             online,
             training,
             sold_out,
