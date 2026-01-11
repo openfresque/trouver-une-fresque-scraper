@@ -10,7 +10,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 from trouver_une_fresque_scraper.db.records import get_record_dict
-from trouver_une_fresque_scraper.utils.date_and_time import get_dates_from_element
+from trouver_une_fresque_scraper.utils.date_and_time import get_dates_from_element, get_dates
 from trouver_une_fresque_scraper.utils.errors import (
     FreskError,
     FreskDateBadFormat,
@@ -106,9 +106,7 @@ def scroll_to_bottom(driver):
 
 def get_eventbrite_data(sources, service, options):
     """
-    Scrape EventBrite events with improved error handling and resource management.
-
-    Uses context manager to ensure driver cleanup even if errors occur.
+    Scrape EventBrite events with proper waits.
 
     Args:
         sources: List of source page configurations (dicts with 'id' and 'url')
@@ -161,18 +159,14 @@ def get_eventbrite_data(sources, service, options):
 
                 # Process each event
                 for link in links:
-                    try:
-                        event_records = process_event_page(driver, link, page)
-                        records.extend(event_records)
-                    except Exception as e:
-                        logging.error(f"Failed to process event {link}: {e}", exc_info=True)
-                        continue
+                    event_records = process_event_page(driver, link, page)
+                    records.extend(event_records)
 
             except Exception as e:
                 logging.error(
                     f"Failed to process organizer page {page.get('url', page)}: {e}", exc_info=True
                 )
-                continue
+                raise
 
     return records
 
@@ -330,7 +324,8 @@ def process_event_page(driver, link, page):
         date_time_div = safe_find_element(
             driver, By.CSS_SELECTOR, "div.select-date-and-time", timeout=DEFAULT_TIMEOUT
         )
-
+        # tbouvier: I think that this selector is actually obsolete. This was refering to
+        # a carousel of dates that EventBrite used to have a while ago.
         if date_time_div:
             # Multiple events on this page
             driver.execute_script("window.scrollBy(0, arguments[0]);", 800)
@@ -396,38 +391,299 @@ def process_event_page(driver, link, page):
             # Single event with multiple dates (a "collection").
             ################################################################
             check_availability_btn = safe_find_element(
-                driver, By.CSS_SELECTOR, "button.check-availability-btn__button", timeout=0
+                driver, By.CSS_SELECTOR, "button[id^='check-availability-btn-']", timeout=0
             )
 
             if check_availability_btn:
-                # TODO: add support for this.
-                logging.error(f"EventBrite collection not supported in event {link}.")
-                return records
+                # Click the button to open the modal
+                try:
+                    logging.info("Found EventBrite collection, clicking availability button...")
+                    check_availability_btn.click()
 
-            ################################################################
-            # Dates
-            ################################################################
-            date_info_el = safe_find_element(
-                driver, By.CSS_SELECTOR, "time.start-date-and-location__date", required=True
-            )
+                    # Wait for modal to load by waiting for first date wrapper element to appear
+                    logging.debug("Waiting for modal to load...")
+                    time.sleep(PAGE_LOAD_DELAY)  # Give initial time for modal animation
 
-            try:
-                event_start_datetime, event_end_datetime = get_dates_from_element(date_info_el)
-            except FreskDateBadFormat as error:
-                logging.info(f"Reject record: {error}")
-                return records
+                    # Switch to iframe if modal content is in an iframe
+                    iframe = safe_find_element(
+                        driver,
+                        By.CSS_SELECTOR,
+                        'iframe[id*="eventbrite-widget"], iframe[class*="modal"], iframe[title*="availability"]',
+                        timeout=DEFAULT_TIMEOUT,
+                        required=False,
+                    )
+                    if iframe:
+                        logging.debug("Switching to iframe for modal content...")
+                        driver.switch_to.frame(iframe)
 
-            ################################################################
-            # Parse tickets link
-            ################################################################
-            tickets_link = driver.current_url
+                    ################################################################
+                    # Check which type of modal we have
+                    ################################################################
 
-            ################################################################
-            # Parse event id
-            ################################################################
-            uuid = re.search(r"/e/([^/?]+)", tickets_link).group(1)
+                    # Type 1: Simple list with date wrappers (one or more dates with time slots shown)
+                    date_wrappers = driver.find_elements(By.CSS_SELECTOR, 'p[class*="dateWrapper"]')
+                    # Type 2: Calendar/carousel with clickable date cards
+                    calendar_date_cards = driver.find_elements(
+                        By.CSS_SELECTOR,
+                        'div[class*="CompactCalendar"] div[class*="compactChoiceCardContainer"]',
+                    )
 
-            event_info.append([uuid, event_start_datetime, event_end_datetime, tickets_link])
+                    if calendar_date_cards:
+                        ################################################################
+                        # Handle calendar-style modal (Type 2)
+                        ################################################################
+                        logging.info(
+                            f"Found calendar-style modal with {len(calendar_date_cards)} date cards"
+                        )
+
+                        # Process each date card in the calendar
+                        for card_index, date_card in enumerate(calendar_date_cards):
+                            try:
+                                # Extract date information from the card before clicking
+                                weekday_el = date_card.find_element(
+                                    By.CSS_SELECTOR, 'p[class*="weekday"]'
+                                )
+                                day_num_el = date_card.find_element(
+                                    By.CSS_SELECTOR, 'p[class*="dateText"]'
+                                )
+                                time_slot_el = date_card.find_element(
+                                    By.CSS_SELECTOR, 'p[class*="timeSlot"]'
+                                )
+
+                                weekday = weekday_el.text  # e.g., "SAT"
+                                day_num = day_num_el.text  # e.g., "24"
+                                time_slot = time_slot_el.text  # e.g., "9:00 am"
+
+                                # Get the month by finding the parent CompactCalendar_compactDateGrid
+                                # and then looking for the preceding monthName sibling
+                                month = "Unknown"
+                                try:
+                                    # Navigate to the parent grid container
+                                    date_grid = date_card.find_element(
+                                        By.XPATH,
+                                        "./ancestor::div[contains(@class, 'compactDateGrid')]",
+                                    )
+                                    # Get the parent Stack_root that contains both month name and grid
+                                    stack_parent = date_grid.find_element(By.XPATH, "./parent::div")
+                                    # Find the month name in the same parent
+                                    month_header = stack_parent.find_element(
+                                        By.CSS_SELECTOR, 'p[class*="monthName"]'
+                                    )
+                                    month = month_header.text  # e.g., "January"
+                                except Exception as e:
+                                    logging.debug(f"Could not find month header: {e}")
+
+                                logging.debug(
+                                    f"Processing calendar date: {weekday}, {month} {day_num} at {time_slot}"
+                                )
+
+                                # Format the date string for parsing
+                                # e.g., "SAT, January 24 9:00 am"
+                                date_str = f"{weekday}, {month} {day_num} {time_slot}"
+
+                                try:
+                                    # Parse the date - we may need to add end time logic
+                                    # For now, assume default duration if no end time
+                                    event_start_datetime, event_end_datetime = get_dates(date_str)
+                                except FreskDateBadFormat as error:
+                                    logging.warning(
+                                        f"Failed to parse calendar date '{date_str}': {error}"
+                                    )
+                                    continue
+
+                                # Generate UUID
+                                base_uuid = re.search(r"/e/([^/?]+)", link).group(1)
+                                unique_suffix = hash(date_str) % 10000
+                                uuid = f"{base_uuid}-{unique_suffix}"
+
+                                event_info.append(
+                                    [
+                                        uuid,
+                                        event_start_datetime,
+                                        event_end_datetime,
+                                        link,
+                                    ]
+                                )
+                                logging.debug(f"Added calendar event: {uuid}")
+
+                            except Exception as e:
+                                logging.warning(
+                                    f"Failed to process calendar date card {card_index + 1}: {e}"
+                                )
+                                continue
+
+                    elif date_wrappers:
+                        ################################################################
+                        # Handle simple list modal (Type 1)
+                        ################################################################
+                        logging.info(f"Found {len(date_wrappers)} dates in list-style modal")
+
+                        # Process each date
+                        for date_wrapper in date_wrappers:
+                            try:
+                                date_text = date_wrapper.text
+                                logging.debug(f"Processing date: {date_text}")
+
+                                # Click on the date wrapper or its parent card to reveal time slots
+                                try:
+                                    # Try to find the clickable parent (EventInfoCard or similar)
+                                    clickable_parent = date_wrapper.find_element(
+                                        By.XPATH,
+                                        "./ancestor::div[contains(@class, 'EventInfoCard')]",
+                                    )
+                                    clickable_parent.click()
+                                    logging.debug(f"Clicked on date card for: {date_text}")
+
+                                    # Wait for time slots to load - use explicit wait for time slot list to appear
+                                    logging.debug("Waiting for time slots to load...")
+                                    time_slot_list_loaded = safe_find_element(
+                                        driver,
+                                        By.CSS_SELECTOR,
+                                        'ul[class*="TimeSlotList"]',
+                                        timeout=DEFAULT_TIMEOUT,
+                                        required=False,
+                                    )
+
+                                    if not time_slot_list_loaded:
+                                        logging.warning(
+                                            f"Time slot list did not load for date: {date_text}"
+                                        )
+                                        continue
+
+                                    # Give extra time for all content to render
+                                    time.sleep(2)
+
+                                except Exception as e:
+                                    logging.debug(f"Could not click date card: {e}")
+
+                                # Find the time slots - search more broadly in the entire iframe/modal
+                                # Look for TimeSlotList ul elements in the entire document
+                                all_time_slot_lists = driver.find_elements(
+                                    By.CSS_SELECTOR, 'ul[class*="TimeSlotList"]'
+                                )
+
+                                if not all_time_slot_lists:
+                                    logging.warning(
+                                        f"No time slot lists found for date: {date_text}"
+                                    )
+                                    continue
+
+                                logging.debug(
+                                    f"Found {len(all_time_slot_lists)} time slot lists in modal"
+                                )
+
+                                # Extract time slot data immediately to avoid stale element issues
+                                time_slots_data = []
+                                for time_slot_list in all_time_slot_lists:
+                                    time_slot_lis = time_slot_list.find_elements(By.TAG_NAME, "li")
+                                    for time_slot_li in time_slot_lis:
+                                        try:
+                                            # Extract text immediately before DOM can change
+                                            time_element = time_slot_li.find_element(
+                                                By.CSS_SELECTOR, 'p[class*="sessionText"]'
+                                            )
+                                            time_text = time_element.text
+                                            if time_text:  # Only add if we got actual text
+                                                time_slots_data.append(time_text)
+                                        except Exception as e:
+                                            logging.debug(f"Could not extract time slot text: {e}")
+                                            continue
+
+                                if not time_slots_data:
+                                    logging.warning(f"No time slots found for date: {date_text}")
+                                    continue
+
+                                logging.debug(
+                                    f"Found {len(time_slots_data)} time slots for date: {date_text}"
+                                )
+
+                                # Process each time slot for this date
+                                for time_text in time_slots_data:
+                                    try:
+                                        logging.debug(f"Processing time slot: {time_text}")
+
+                                        # Combine date and time for parsing
+                                        # Format: "Sat, Feb 14 9:00 am - 12:30 pm"
+                                        combined_text = f"{date_text} {time_text}"
+
+                                        try:
+                                            # Use get_dates directly to parse the text
+                                            event_start_datetime, event_end_datetime = get_dates(
+                                                combined_text
+                                            )
+                                        except FreskDateBadFormat as error:
+                                            logging.warning(
+                                                f"Failed to parse date '{combined_text}': {error}"
+                                            )
+                                            continue
+
+                                        # Generate a unique UUID for this specific date/time combo
+                                        base_uuid = re.search(r"/e/([^/?]+)", link).group(1)
+                                        # Create unique ID by combining base UUID with date/time hash
+                                        unique_suffix = hash(combined_text) % 10000
+                                        uuid = f"{base_uuid}-{unique_suffix}"
+
+                                        event_info.append(
+                                            [
+                                                uuid,
+                                                event_start_datetime,
+                                                event_end_datetime,
+                                                link,
+                                            ]
+                                        )
+                                        logging.debug(f"Added event: {uuid}")
+
+                                    except Exception as e:
+                                        logging.warning(
+                                            f"Failed to process time slot '{time_text}': {e}"
+                                        )
+                                        continue
+
+                            except Exception as e:
+                                logging.warning(f"Failed to process date wrapper: {e}")
+                                continue
+                    if not event_info:
+                        logging.error(f"No valid events extracted from collection for {link}.")
+                        driver.switch_to.default_content()
+                        return records
+
+                    # Switch back to default content after processing modal
+                    driver.switch_to.default_content()
+                    logging.debug("Switched back to default content")
+
+                except Exception as e:
+                    logging.error(
+                        f"Failed to process EventBrite collection for {link}: {e}", exc_info=True
+                    )
+                    # Make sure to switch back even on error
+                    driver.switch_to.default_content()
+                    return records
+            else:
+                # Regular single event
+                ################################################################
+                # Dates
+                ################################################################
+                date_info_el = safe_find_element(
+                    driver, By.CSS_SELECTOR, "time.start-date-and-location__date", required=True
+                )
+
+                try:
+                    event_start_datetime, event_end_datetime = get_dates_from_element(date_info_el)
+                except FreskDateBadFormat as error:
+                    logging.info(f"Reject record: {error}")
+                    return records
+
+                ################################################################
+                # Parse tickets link
+                ################################################################
+                tickets_link = driver.current_url
+
+                ################################################################
+                # Parse event id
+                ################################################################
+                uuid = re.search(r"/e/([^/?]+)", tickets_link).group(1)
+
+                event_info.append([uuid, event_start_datetime, event_end_datetime, tickets_link])
 
         ################################################################
         # Session loop
