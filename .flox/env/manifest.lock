@@ -6,6 +6,9 @@
       "coreutils": {
         "pkg-path": "coreutils"
       },
+      "ffmpeg": {
+        "pkg-path": "ffmpeg"
+      },
       "firefox-esr": {
         "pkg-path": "firefox-esr"
       },
@@ -17,6 +20,9 @@
       },
       "gum": {
         "pkg-path": "gum"
+      },
+      "jq": {
+        "pkg-path": "jq"
       },
       "postgresql": {
         "pkg-path": "postgresql"
@@ -33,7 +39,7 @@
       }
     },
     "hook": {
-      "on-activate": "# Dynamically set WEBDRIVER_PATH required for the scraper\nexport WEBDRIVER_PATH=\"$(which geckodriver)\"\nexport BROWSER_PATH=\"$(which firefox-esr)\"\n\n# Flox stuff\nexport FLOX_PYTHON_UV_CACHE_DIR=\"$FLOX_ENV_CACHE/python-uv\"\nmkdir -p \"$FLOX_PYTHON_UV_CACHE_DIR\"\n\nexport FLOX_PYTHON_UV_VENV_PATH=\"$FLOX_PYTHON_UV_CACHE_DIR/venv\"\nexport FLOX_PYTHON_UV_VENV_INTERPRETER=\"$(cat \"$FLOX_PYTHON_UV_CACHE_DIR/venv.interpreter\" 2> /dev/null || echo false )\"\nexport FLOX_PYTHON_UV_INTERPRETER=\"$(realpath $(which python3))\"\n\n# Make sure any tools are not attempting to use the Python interpreter from any\n# existing virtual environment.\nunset VIRTUAL_ENV\n\nexport UV_PROJECT_ENVIRONMENT=\"$FLOX_PYTHON_UV_VENV_PATH\"\n\nfunction indent() {\n  echo -e '{{ Foreground \"#cccccc\" \" │ \"}}' | \\\n    gum format -t template --theme=auto\n}\n\nfunction with_spinner() {\n  if [[ \"$FLOX_ENVS_TESTING\" == \"1\" ]]; then\n    bash -c \"$1\"\n  else\n    echo\n    gum spin \\\n      --show-error \\\n      --spinner line \\\n      --spinner.foreground=\"#cccccc\" \\\n      --title \" >>> $2 ...\" \\\n      --title.foreground=\"#cccccc\" \\\n        -- bash -c \"$1\"\n    echo -en \"\\033[2A\\033[K\"\n  fi\n}\n\nfunction ensure_venv() {\n  uv venv -p \"$FLOX_PYTHON_UV_INTERPRETER\" \"$FLOX_PYTHON_UV_VENV_PATH\"\n  source \"$FLOX_PYTHON_UV_VENV_PATH/bin/activate\"\n}\nexport -f ensure_venv\n\nfunction install_packages() {\n  uv sync\n}\nexport -f install_packages\n\n\n\nindent && echo\nindent && echo\n\nif [ \"$FLOX_PYTHON_UV_VENV_INTERPRETER\" != \"$FLOX_PYTHON_UV_INTERPRETER\" ]; then\n  with_spinner ensure_venv \"Creating virtual environment\"\n  indent && echo -e \"{{ Foreground \\\"#ffffff\\\" \\\"✅ Virtual environment was created.\\\" }}\\n\" \\\n    | gum format -t template\nelse\n  indent && echo -e \"{{ Foreground \\\"#ffffff\\\" \\\"✅ Virtual environment already exists.\\\" }}\\n\" \\\n    | gum format -t template\nfi\n\nindent && echo\n\nif [ -f pyproject.toml ]; then\n  with_spinner install_packages \"Installing Python packages\"\n  indent && echo -e \"{{ Foreground \\\"#ffffff\\\" \\\"✅ Python packages installed.\\\" }}\\n\" \\\n    | gum format -t template\nelse\n  indent && echo -e \"{{ Foreground \\\"#ffffff\\\" \\\"✅ No need to install Python packages.\\\" }}\\n\" \\\n    | gum format -t template\nfi\n\nindent && echo\n\n"
+      "on-activate": "# Dynamically set WEBDRIVER_PATH required for the scraper\nexport WEBDRIVER_PATH=\"$(which geckodriver)\"\nexport BROWSER_PATH=\"$(which firefox-esr)\"\n\n# Playwright configuration\nexport PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1\nexport PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=true\n# Create a playwright browsers directory structure\nexport PLAYWRIGHT_BROWSERS_PATH=\"$FLOX_ENV_CACHE/playwright-browsers\"\nmkdir -p \"$PLAYWRIGHT_BROWSERS_PATH\"\n\n# Flox stuff\nexport FLOX_PYTHON_UV_CACHE_DIR=\"$FLOX_ENV_CACHE/python-uv\"\nmkdir -p \"$FLOX_PYTHON_UV_CACHE_DIR\"\n\nexport FLOX_PYTHON_UV_VENV_PATH=\"$FLOX_PYTHON_UV_CACHE_DIR/venv\"\nexport FLOX_PYTHON_UV_VENV_INTERPRETER=\"$(cat \"$FLOX_PYTHON_UV_CACHE_DIR/venv.interpreter\" 2> /dev/null || echo false )\"\nexport FLOX_PYTHON_UV_INTERPRETER=\"$(realpath $(which python3))\"\n\n# Make sure any tools are not attempting to use the Python interpreter from any\n# existing virtual environment.\nunset VIRTUAL_ENV\n\nexport UV_PROJECT_ENVIRONMENT=\"$FLOX_PYTHON_UV_VENV_PATH\"\n\nfunction indent() {\n  echo -e '{{ Foreground \"#cccccc\" \" │ \"}}' | \\\n    gum format -t template --theme=auto\n}\n\nfunction with_spinner() {\n  if [[ \"$FLOX_ENVS_TESTING\" == \"1\" ]]; then\n    bash -c \"$1\"\n  else\n    echo\n    gum spin \\\n      --show-error \\\n      --spinner line \\\n      --spinner.foreground=\"#cccccc\" \\\n      --title \" >>> $2 ...\" \\\n      --title.foreground=\"#cccccc\" \\\n        -- bash -c \"$1\"\n    echo -en \"\\033[2A\\033[K\"\n  fi\n}\n\nfunction ensure_venv() {\n  uv venv -p \"$FLOX_PYTHON_UV_INTERPRETER\" \"$FLOX_PYTHON_UV_VENV_PATH\"\n  source \"$FLOX_PYTHON_UV_VENV_PATH/bin/activate\"\n}\nexport -f ensure_venv\n\nfunction install_packages() {\n  uv sync\n}\nexport -f install_packages\n\n\n\nindent && echo\nindent && echo\n\nif [ \"$FLOX_PYTHON_UV_VENV_INTERPRETER\" != \"$FLOX_PYTHON_UV_INTERPRETER\" ]; then\n  with_spinner ensure_venv \"Creating virtual environment\"\n  indent && echo -e \"{{ Foreground \\\"#ffffff\\\" \\\"✅ Virtual environment was created.\\\" }}\\n\" \\\n    | gum format -t template\nelse\n  indent && echo -e \"{{ Foreground \\\"#ffffff\\\" \\\"✅ Virtual environment already exists.\\\" }}\\n\" \\\n    | gum format -t template\nfi\n\nindent && echo\n\nif [ -f pyproject.toml ]; then\n  with_spinner install_packages \"Installing Python packages\"\n  indent && echo -e \"{{ Foreground \\\"#ffffff\\\" \\\"✅ Python packages installed.\\\" }}\\n\" \\\n    | gum format -t template\nelse\n  indent && echo -e \"{{ Foreground \\\"#ffffff\\\" \\\"✅ No need to install Python packages.\\\" }}\\n\" \\\n    | gum format -t template\nfi\n\nindent && echo\n\n"
     },
     "profile": {
       "bash": "source \"$FLOX_PYTHON_UV_VENV_PATH/bin/activate\"\n",
@@ -172,6 +178,154 @@
         "debug": "/nix/store/hichgz37f1327dfi0saqll0lpbimvfw0-coreutils-9.7-debug",
         "info": "/nix/store/x13fzfc1lv1nbmszq25kajhsxzwzyd6r-coreutils-9.7-info",
         "out": "/nix/store/psy9v2asypgl9ylg8cnzkixc7fv0snj0-coreutils-9.7"
+      },
+      "system": "x86_64-linux",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
+      "attr_path": "ffmpeg",
+      "broken": false,
+      "derivation": "/nix/store/3771861j024gcjckjaw80wdpzd8hj4zh-ffmpeg-7.1.1.drv",
+      "description": "Complete, cross-platform solution to record, convert and stream audio and video",
+      "install_id": "ffmpeg",
+      "license": "[ LGPL-2.1-or-later, GPL-2.0-or-later, LGPL-3.0-or-later, GPL-3.0-or-later ]",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=9807714d6944a957c2e036f84b0ff8caf9930bc0",
+      "name": "ffmpeg-7.1.1",
+      "pname": "ffmpeg",
+      "rev": "9807714d6944a957c2e036f84b0ff8caf9930bc0",
+      "rev_count": 826938,
+      "rev_date": "2025-07-08T14:16:20Z",
+      "scrape_date": "2025-07-10T05:14:30.780244Z",
+      "stabilities": [
+        "staging",
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "7.1.1",
+      "outputs_to_install": [
+        "bin",
+        "man"
+      ],
+      "outputs": {
+        "bin": "/nix/store/dfc4gg05vh5wini7z0wvia3x0slszqxi-ffmpeg-7.1.1-bin",
+        "data": "/nix/store/gvi63i8d8bgskz7sn9cyxxxiv672sf85-ffmpeg-7.1.1-data",
+        "dev": "/nix/store/mkn3bcjc31ncgrkkz9dpz1kk6qa42xg4-ffmpeg-7.1.1-dev",
+        "doc": "/nix/store/hk8y3r6balvnnfcq3k13cfm9c3ia2mk8-ffmpeg-7.1.1-doc",
+        "lib": "/nix/store/baskwy2f8dv70x8wbzn0snalmj4jbi0s-ffmpeg-7.1.1-lib",
+        "man": "/nix/store/5kihrhaqwl512s3ls81jabkks12k0a5p-ffmpeg-7.1.1-man",
+        "out": "/nix/store/gifp9jd3qjab52msjb5s2hgqfmxl56wr-ffmpeg-7.1.1"
+      },
+      "system": "aarch64-darwin",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
+      "attr_path": "ffmpeg",
+      "broken": false,
+      "derivation": "/nix/store/dykir58glqirqfiy32pmi73975wl7cyx-ffmpeg-7.1.1.drv",
+      "description": "Complete, cross-platform solution to record, convert and stream audio and video",
+      "install_id": "ffmpeg",
+      "license": "[ LGPL-2.1-or-later, GPL-2.0-or-later, LGPL-3.0-or-later, GPL-3.0-or-later ]",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=9807714d6944a957c2e036f84b0ff8caf9930bc0",
+      "name": "ffmpeg-7.1.1",
+      "pname": "ffmpeg",
+      "rev": "9807714d6944a957c2e036f84b0ff8caf9930bc0",
+      "rev_count": 826938,
+      "rev_date": "2025-07-08T14:16:20Z",
+      "scrape_date": "2025-07-10T05:34:51.071704Z",
+      "stabilities": [
+        "staging",
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "7.1.1",
+      "outputs_to_install": [
+        "bin",
+        "man"
+      ],
+      "outputs": {
+        "bin": "/nix/store/h6mwj82isk6jr3k4mgxb1nag64f0jss7-ffmpeg-7.1.1-bin",
+        "data": "/nix/store/rfw07bhd8y5ijlgjdna5qasvawxw2n4w-ffmpeg-7.1.1-data",
+        "dev": "/nix/store/gfx8kpcy7k3gxkvn7yhky7vg9a3mwyv3-ffmpeg-7.1.1-dev",
+        "doc": "/nix/store/dcxfjlbafvx46j4g390556aq2qw18750-ffmpeg-7.1.1-doc",
+        "lib": "/nix/store/s32cgc65yyyypc7hrr1rmk176s91swby-ffmpeg-7.1.1-lib",
+        "man": "/nix/store/z10q1cvxg07xc14v0m67f803a6qdfmw6-ffmpeg-7.1.1-man",
+        "out": "/nix/store/pycnzblqxmz73m01vlhm56bm9f4c23dk-ffmpeg-7.1.1"
+      },
+      "system": "aarch64-linux",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
+      "attr_path": "ffmpeg",
+      "broken": false,
+      "derivation": "/nix/store/hm8nqga77ww8cvb0xn3jw97qa0z24lg6-ffmpeg-7.1.1.drv",
+      "description": "Complete, cross-platform solution to record, convert and stream audio and video",
+      "install_id": "ffmpeg",
+      "license": "[ LGPL-2.1-or-later, GPL-2.0-or-later, LGPL-3.0-or-later, GPL-3.0-or-later ]",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=9807714d6944a957c2e036f84b0ff8caf9930bc0",
+      "name": "ffmpeg-7.1.1",
+      "pname": "ffmpeg",
+      "rev": "9807714d6944a957c2e036f84b0ff8caf9930bc0",
+      "rev_count": 826938,
+      "rev_date": "2025-07-08T14:16:20Z",
+      "scrape_date": "2025-07-10T05:53:49.058807Z",
+      "stabilities": [
+        "staging",
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "7.1.1",
+      "outputs_to_install": [
+        "bin",
+        "man"
+      ],
+      "outputs": {
+        "bin": "/nix/store/s19y1fmx83ikf86aawrb7c26m72s3bc3-ffmpeg-7.1.1-bin",
+        "data": "/nix/store/19p8i9h14nglzdd6wc3mghbg45nmp483-ffmpeg-7.1.1-data",
+        "dev": "/nix/store/gjll8755acj7h5whvwm25czv1f258a32-ffmpeg-7.1.1-dev",
+        "doc": "/nix/store/hmwwip1qz1zkl964a13pdq9b38cqlpsc-ffmpeg-7.1.1-doc",
+        "lib": "/nix/store/s87203f502gsm77g0pjnh8yq0q4kis1n-ffmpeg-7.1.1-lib",
+        "man": "/nix/store/kzb9la1ag1dv64p3a6iza2bzg3l07389-ffmpeg-7.1.1-man",
+        "out": "/nix/store/941zsn4snzgn9ixca2xvfm4mrgpmln28-ffmpeg-7.1.1"
+      },
+      "system": "x86_64-darwin",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
+      "attr_path": "ffmpeg",
+      "broken": false,
+      "derivation": "/nix/store/50jak1r7wl4ngcpra69v8b14rjc1fp6r-ffmpeg-7.1.1.drv",
+      "description": "Complete, cross-platform solution to record, convert and stream audio and video",
+      "install_id": "ffmpeg",
+      "license": "[ LGPL-2.1-or-later, GPL-2.0-or-later, LGPL-3.0-or-later, GPL-3.0-or-later ]",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=9807714d6944a957c2e036f84b0ff8caf9930bc0",
+      "name": "ffmpeg-7.1.1",
+      "pname": "ffmpeg",
+      "rev": "9807714d6944a957c2e036f84b0ff8caf9930bc0",
+      "rev_count": 826938,
+      "rev_date": "2025-07-08T14:16:20Z",
+      "scrape_date": "2025-07-10T06:15:25.529407Z",
+      "stabilities": [
+        "staging",
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "7.1.1",
+      "outputs_to_install": [
+        "bin",
+        "man"
+      ],
+      "outputs": {
+        "bin": "/nix/store/xlaxc221s74adj2ii6gix03hp2vyam7q-ffmpeg-7.1.1-bin",
+        "data": "/nix/store/xz0qclfip6nmv3vky15vdcvfih2fbj75-ffmpeg-7.1.1-data",
+        "dev": "/nix/store/xlhzsi7n58f4fj7abisb93znc9zsscl5-ffmpeg-7.1.1-dev",
+        "doc": "/nix/store/qaf0nsgk9knra7kz0s2n3v6sikac5xjm-ffmpeg-7.1.1-doc",
+        "lib": "/nix/store/7ymk5744xw8pnkr3bb4xzizlm81a85ma-ffmpeg-7.1.1-lib",
+        "man": "/nix/store/h4lhxqmwq189vfqwwpbdhv809j17c7lm-ffmpeg-7.1.1-man",
+        "out": "/nix/store/zqc5czqispbiwq6myz6hsgzanp3y2aly-ffmpeg-7.1.1"
       },
       "system": "x86_64-linux",
       "group": "toplevel",
@@ -672,6 +826,146 @@
       ],
       "outputs": {
         "out": "/nix/store/3kmqn7xy8pch0ivksqgmfz2wzdjhpxzq-gum-0.16.2"
+      },
+      "system": "x86_64-linux",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
+      "attr_path": "jq",
+      "broken": false,
+      "derivation": "/nix/store/jxsfifxplh0p1bzqvada82zbph9fbkjs-jq-1.8.0.drv",
+      "description": "Lightweight and flexible command-line JSON processor",
+      "install_id": "jq",
+      "license": "MIT",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=9807714d6944a957c2e036f84b0ff8caf9930bc0",
+      "name": "jq-1.8.0",
+      "pname": "jq",
+      "rev": "9807714d6944a957c2e036f84b0ff8caf9930bc0",
+      "rev_count": 826938,
+      "rev_date": "2025-07-08T14:16:20Z",
+      "scrape_date": "2025-07-10T05:14:31.509700Z",
+      "stabilities": [
+        "staging",
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "1.8.0",
+      "outputs_to_install": [
+        "bin",
+        "man"
+      ],
+      "outputs": {
+        "bin": "/nix/store/04gj0cpc6mv0pkyz114p23fq65zx8mbx-jq-1.8.0-bin",
+        "dev": "/nix/store/glkhwajjprqny359z1awxll8vnsa66lf-jq-1.8.0-dev",
+        "doc": "/nix/store/yygyqari7g4kz9j0yyyl2lq6v2bg3dw2-jq-1.8.0-doc",
+        "man": "/nix/store/7zdrvbyc5pgq9by1wzpn0q28iqsd0lx7-jq-1.8.0-man",
+        "out": "/nix/store/78wqqi0zdlrgadz3nmd909axh5182k7v-jq-1.8.0"
+      },
+      "system": "aarch64-darwin",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
+      "attr_path": "jq",
+      "broken": false,
+      "derivation": "/nix/store/g7n19a9nf882h325lbcnkynnpdcpzv8i-jq-1.8.0.drv",
+      "description": "Lightweight and flexible command-line JSON processor",
+      "install_id": "jq",
+      "license": "MIT",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=9807714d6944a957c2e036f84b0ff8caf9930bc0",
+      "name": "jq-1.8.0",
+      "pname": "jq",
+      "rev": "9807714d6944a957c2e036f84b0ff8caf9930bc0",
+      "rev_count": 826938,
+      "rev_date": "2025-07-08T14:16:20Z",
+      "scrape_date": "2025-07-10T05:34:53.140531Z",
+      "stabilities": [
+        "staging",
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "1.8.0",
+      "outputs_to_install": [
+        "bin",
+        "man"
+      ],
+      "outputs": {
+        "bin": "/nix/store/k9mybm2b3yr0v9fsm8vi0319diai4flj-jq-1.8.0-bin",
+        "dev": "/nix/store/rzzhwmzryil6g7pl5i7jb4fs54nkkrm4-jq-1.8.0-dev",
+        "doc": "/nix/store/xjcyd1pjjzja918407x5hvsa6sa3k4mj-jq-1.8.0-doc",
+        "man": "/nix/store/v8lgx3i8v7kjqzgs8x75v0ysrlylfhg1-jq-1.8.0-man",
+        "out": "/nix/store/8p4cdklsb5kn1w4ycq9na07ja19j6d87-jq-1.8.0"
+      },
+      "system": "aarch64-linux",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
+      "attr_path": "jq",
+      "broken": false,
+      "derivation": "/nix/store/as3kra9fv1p14n09llnhxzglh3lkjsm6-jq-1.8.0.drv",
+      "description": "Lightweight and flexible command-line JSON processor",
+      "install_id": "jq",
+      "license": "MIT",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=9807714d6944a957c2e036f84b0ff8caf9930bc0",
+      "name": "jq-1.8.0",
+      "pname": "jq",
+      "rev": "9807714d6944a957c2e036f84b0ff8caf9930bc0",
+      "rev_count": 826938,
+      "rev_date": "2025-07-08T14:16:20Z",
+      "scrape_date": "2025-07-10T05:53:49.833952Z",
+      "stabilities": [
+        "staging",
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "1.8.0",
+      "outputs_to_install": [
+        "bin",
+        "man"
+      ],
+      "outputs": {
+        "bin": "/nix/store/4d5y298s33gi9vcvviq8xah06203395s-jq-1.8.0-bin",
+        "dev": "/nix/store/zsmngm14i76pv54z4n8sj7dcwy6x10kn-jq-1.8.0-dev",
+        "doc": "/nix/store/0122gf5v7922213mkjp3vlij53fkqvir-jq-1.8.0-doc",
+        "man": "/nix/store/drgz0ky78p3c6raccn7xsb5m9f91ba3x-jq-1.8.0-man",
+        "out": "/nix/store/akq414spg0yr5rdba7mbbvz8s945gmya-jq-1.8.0"
+      },
+      "system": "x86_64-darwin",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
+      "attr_path": "jq",
+      "broken": false,
+      "derivation": "/nix/store/wngak93q17smdrb1zix8gyzy4j5mjvi0-jq-1.8.0.drv",
+      "description": "Lightweight and flexible command-line JSON processor",
+      "install_id": "jq",
+      "license": "MIT",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=9807714d6944a957c2e036f84b0ff8caf9930bc0",
+      "name": "jq-1.8.0",
+      "pname": "jq",
+      "rev": "9807714d6944a957c2e036f84b0ff8caf9930bc0",
+      "rev_count": 826938,
+      "rev_date": "2025-07-08T14:16:20Z",
+      "scrape_date": "2025-07-10T06:15:27.811735Z",
+      "stabilities": [
+        "staging",
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "1.8.0",
+      "outputs_to_install": [
+        "bin",
+        "man"
+      ],
+      "outputs": {
+        "bin": "/nix/store/2n9hfcfqdszxgsmi4qyqq6rv947dwwg9-jq-1.8.0-bin",
+        "dev": "/nix/store/dvy119mx8ab0yjxblaaippb2js6nbzkn-jq-1.8.0-dev",
+        "doc": "/nix/store/5qly4lwxrq5r3x472g2w35rz50b54a6n-jq-1.8.0-doc",
+        "man": "/nix/store/njrgxwqnifcyh3x0v18v83ig179zccx0-jq-1.8.0-man",
+        "out": "/nix/store/qqx05qwhhmbrviw3iskgaigjxhczqhvx-jq-1.8.0"
       },
       "system": "x86_64-linux",
       "group": "toplevel",

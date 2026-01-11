@@ -9,6 +9,8 @@ gcc-unwrapped.pkg-path = "gcc-unwrapped"
 firefox-esr.pkg-path = "firefox-esr"
 geckodriver.pkg-path = "geckodriver"
 postgresql.pkg-path = "postgresql"
+ffmpeg.pkg-path = "ffmpeg"
+jq.pkg-path = "jq"
 
 
 # helper tools
@@ -23,6 +25,13 @@ on-activate = '''
 # Dynamically set WEBDRIVER_PATH required for the scraper
 export WEBDRIVER_PATH="$(which geckodriver)"
 export BROWSER_PATH="$(which firefox-esr)"
+
+# Playwright configuration
+export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+export PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=true
+# Create a playwright browsers directory structure
+export PLAYWRIGHT_BROWSERS_PATH="$FLOX_ENV_CACHE/playwright-browsers"
+mkdir -p "$PLAYWRIGHT_BROWSERS_PATH"
 
 # Flox stuff
 export FLOX_PYTHON_UV_CACHE_DIR="$FLOX_ENV_CACHE/python-uv"
