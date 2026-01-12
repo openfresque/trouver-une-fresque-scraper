@@ -3,26 +3,33 @@
   "manifest": {
     "version": 1,
     "install": {
+      "chromium": {
+        "pkg-path": "chromium",
+        "systems": [
+          "aarch64-linux",
+          "x86_64-linux"
+        ]
+      },
       "coreutils": {
         "pkg-path": "coreutils"
       },
       "ffmpeg": {
         "pkg-path": "ffmpeg"
       },
-      "firefox-esr": {
-        "pkg-path": "firefox-esr"
-      },
       "gcc-unwrapped": {
         "pkg-path": "gcc-unwrapped"
-      },
-      "geckodriver": {
-        "pkg-path": "geckodriver"
       },
       "gum": {
         "pkg-path": "gum"
       },
       "jq": {
         "pkg-path": "jq"
+      },
+      "nodejs": {
+        "pkg-path": "nodejs"
+      },
+      "playwright_driver": {
+        "flake": "github:pietdevries94/playwright-web-flake#playwright-driver"
       },
       "postgresql": {
         "pkg-path": "postgresql"
@@ -39,7 +46,7 @@
       }
     },
     "hook": {
-      "on-activate": "# Dynamically set WEBDRIVER_PATH required for the scraper\nexport WEBDRIVER_PATH=\"$(which geckodriver)\"\nexport BROWSER_PATH=\"$(which firefox-esr)\"\n\n# Playwright configuration\nexport PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1\nexport PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=true\n# Create a playwright browsers directory structure\nexport PLAYWRIGHT_BROWSERS_PATH=\"$FLOX_ENV_CACHE/playwright-browsers\"\nmkdir -p \"$PLAYWRIGHT_BROWSERS_PATH\"\n\n# Flox stuff\nexport FLOX_PYTHON_UV_CACHE_DIR=\"$FLOX_ENV_CACHE/python-uv\"\nmkdir -p \"$FLOX_PYTHON_UV_CACHE_DIR\"\n\nexport FLOX_PYTHON_UV_VENV_PATH=\"$FLOX_PYTHON_UV_CACHE_DIR/venv\"\nexport FLOX_PYTHON_UV_VENV_INTERPRETER=\"$(cat \"$FLOX_PYTHON_UV_CACHE_DIR/venv.interpreter\" 2> /dev/null || echo false )\"\nexport FLOX_PYTHON_UV_INTERPRETER=\"$(realpath $(which python3))\"\n\n# Make sure any tools are not attempting to use the Python interpreter from any\n# existing virtual environment.\nunset VIRTUAL_ENV\n\nexport UV_PROJECT_ENVIRONMENT=\"$FLOX_PYTHON_UV_VENV_PATH\"\n\nfunction indent() {\n  echo -e '{{ Foreground \"#cccccc\" \" │ \"}}' | \\\n    gum format -t template --theme=auto\n}\n\nfunction with_spinner() {\n  if [[ \"$FLOX_ENVS_TESTING\" == \"1\" ]]; then\n    bash -c \"$1\"\n  else\n    echo\n    gum spin \\\n      --show-error \\\n      --spinner line \\\n      --spinner.foreground=\"#cccccc\" \\\n      --title \" >>> $2 ...\" \\\n      --title.foreground=\"#cccccc\" \\\n        -- bash -c \"$1\"\n    echo -en \"\\033[2A\\033[K\"\n  fi\n}\n\nfunction ensure_venv() {\n  uv venv -p \"$FLOX_PYTHON_UV_INTERPRETER\" \"$FLOX_PYTHON_UV_VENV_PATH\"\n  source \"$FLOX_PYTHON_UV_VENV_PATH/bin/activate\"\n}\nexport -f ensure_venv\n\nfunction install_packages() {\n  uv sync\n}\nexport -f install_packages\n\n\n\nindent && echo\nindent && echo\n\nif [ \"$FLOX_PYTHON_UV_VENV_INTERPRETER\" != \"$FLOX_PYTHON_UV_INTERPRETER\" ]; then\n  with_spinner ensure_venv \"Creating virtual environment\"\n  indent && echo -e \"{{ Foreground \\\"#ffffff\\\" \\\"✅ Virtual environment was created.\\\" }}\\n\" \\\n    | gum format -t template\nelse\n  indent && echo -e \"{{ Foreground \\\"#ffffff\\\" \\\"✅ Virtual environment already exists.\\\" }}\\n\" \\\n    | gum format -t template\nfi\n\nindent && echo\n\nif [ -f pyproject.toml ]; then\n  with_spinner install_packages \"Installing Python packages\"\n  indent && echo -e \"{{ Foreground \\\"#ffffff\\\" \\\"✅ Python packages installed.\\\" }}\\n\" \\\n    | gum format -t template\nelse\n  indent && echo -e \"{{ Foreground \\\"#ffffff\\\" \\\"✅ No need to install Python packages.\\\" }}\\n\" \\\n    | gum format -t template\nfi\n\nindent && echo\n\n"
+      "on-activate": "# Playwright configuration\nexport PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=true\n\n# Point to writable cache directory for browsers\nPLAYWRIGHT_BROWSERS_DIR=\"$FLOX_ENV_CACHE/playwright-browsers\"\nmkdir -p \"$PLAYWRIGHT_BROWSERS_DIR\"\nexport PLAYWRIGHT_BROWSERS_PATH=\"$PLAYWRIGHT_BROWSERS_DIR\"\n\n# Flox stuff\nexport FLOX_PYTHON_UV_CACHE_DIR=\"$FLOX_ENV_CACHE/python-uv\"\nmkdir -p \"$FLOX_PYTHON_UV_CACHE_DIR\"\n\nexport FLOX_PYTHON_UV_VENV_PATH=\"$FLOX_PYTHON_UV_CACHE_DIR/venv\"\nexport FLOX_PYTHON_UV_VENV_INTERPRETER=\"$(cat \"$FLOX_PYTHON_UV_CACHE_DIR/venv.interpreter\" 2> /dev/null || echo false )\"\nexport FLOX_PYTHON_UV_INTERPRETER=\"$(realpath $(which python3))\"\n\n# Make sure any tools are not attempting to use the Python interpreter from any\n# existing virtual environment.\nunset VIRTUAL_ENV\n\nexport UV_PROJECT_ENVIRONMENT=\"$FLOX_PYTHON_UV_VENV_PATH\"\n\nfunction indent() {\n  echo -e '{{ Foreground \"#cccccc\" \" │ \"}}' | \\\n    gum format -t template --theme=auto\n}\n\nfunction with_spinner() {\n  if [[ \"$FLOX_ENVS_TESTING\" == \"1\" ]]; then\n    bash -c \"$1\"\n  else\n    echo\n    gum spin \\\n      --show-error \\\n      --spinner line \\\n      --spinner.foreground=\"#cccccc\" \\\n      --title \" >>> $2 ...\" \\\n      --title.foreground=\"#cccccc\" \\\n        -- bash -c \"$1\"\n    echo -en \"\\033[2A\\033[K\"\n  fi\n}\n\nfunction ensure_venv() {\n  uv venv -p \"$FLOX_PYTHON_UV_INTERPRETER\" \"$FLOX_PYTHON_UV_VENV_PATH\"\n  source \"$FLOX_PYTHON_UV_VENV_PATH/bin/activate\"\n}\nexport -f ensure_venv\n\nfunction install_packages() {\n  uv sync\n}\nexport -f install_packages\n\n\n\nindent && echo\nindent && echo\n\nif [ \"$FLOX_PYTHON_UV_VENV_INTERPRETER\" != \"$FLOX_PYTHON_UV_INTERPRETER\" ]; then\n  with_spinner ensure_venv \"Creating virtual environment\"\n  indent && echo -e \"{{ Foreground \\\"#ffffff\\\" \\\"✅ Virtual environment was created.\\\" }}\\n\" \\\n    | gum format -t template\nelse\n  indent && echo -e \"{{ Foreground \\\"#ffffff\\\" \\\"✅ Virtual environment already exists.\\\" }}\\n\" \\\n    | gum format -t template\nfi\n\nindent && echo\n\nif [ -f pyproject.toml ]; then\n  with_spinner install_packages \"Installing Python packages\"\n  indent && echo -e \"{{ Foreground \\\"#ffffff\\\" \\\"✅ Python packages installed.\\\" }}\\n\" \\\n    | gum format -t template\nelse\n  indent && echo -e \"{{ Foreground \\\"#ffffff\\\" \\\"✅ No need to install Python packages.\\\" }}\\n\" \\\n    | gum format -t template\nfi\n\nindent && echo\n\n# NOW fix the Playwright driver after packages are installed\nPLAYWRIGHT_DRIVER_PATH=\"$(find /nix/store -maxdepth 1 -name \"*playwright-driver*\" -type d | head -1)\"\nif [ -d \"$PLAYWRIGHT_DRIVER_PATH\" ]; then\n  # Point Python's playwright driver directory to use the Nix driver\n  PYTHON_PLAYWRIGHT_DRIVER=\"$FLOX_PYTHON_UV_VENV_PATH/lib/python3.13/site-packages/playwright/driver\"\n  if [ -d \"$PYTHON_PLAYWRIGHT_DRIVER\" ]; then\n    # Replace the broken node binary with a wrapper\n    # Playwright calls: node cli.js <args>\n    # We skip the first arg (cli.js path) since we hardcode it\n    NODE_PATH=\"$(readlink -f $(which node))\"\n    rm -f \"$PYTHON_PLAYWRIGHT_DRIVER/node\"\n    cat > \"$PYTHON_PLAYWRIGHT_DRIVER/node\" << WRAPPER\n#!/bin/sh\nshift  # Remove first argument (cli.js path)\nexec \"$NODE_PATH\" \"$PLAYWRIGHT_DRIVER_PATH/package/cli.js\" \"\\$@\"\nWRAPPER\n    chmod +x \"$PYTHON_PLAYWRIGHT_DRIVER/node\"\n    \n    # Link to Nix driver's package\n    rm -rf \"$PYTHON_PLAYWRIGHT_DRIVER/package\"\n    ln -sf \"$PLAYWRIGHT_DRIVER_PATH/package\" \"$PYTHON_PLAYWRIGHT_DRIVER/package\"\n    \n    indent && echo -e \"{{ Foreground \\\"#ffffff\\\" \\\"✅ Playwright driver patched for NixOS.\\\" }}\\n\" \\\n      | gum format -t template\n    \n    # Create Chromium browser wrappers (same approach as playwright-web-flake)\n    indent && echo\n    BROWSERS_JSON=\"$PLAYWRIGHT_DRIVER_PATH/package/browsers.json\"\n    if [ -f \"$BROWSERS_JSON\" ]; then\n      CHROMIUM_REV=$(jq -r '.browsers[] | select(.name == \"chromium\").revision' \"$BROWSERS_JSON\")\n      CHROMIUM_HEADLESS_REV=$(jq -r '.browsers[] | select(.name == \"chromium-headless-shell\").revision' \"$BROWSERS_JSON\")\n      FFMPEG_REV=$(jq -r '.browsers[] | select(.name == \"ffmpeg\").revision' \"$BROWSERS_JSON\")\n      \n      # Use architecture-appropriate directory name\n      [ \"$(uname -m)\" = \"aarch64\" ] && CHROME_DIR=\"chrome-linux\" || CHROME_DIR=\"chrome-linux64\"\n      \n      # Link system Chromium to paths Playwright expects\n      mkdir -p \"$PLAYWRIGHT_BROWSERS_DIR/chromium-$CHROMIUM_REV/$CHROME_DIR\"\n      ln -sf \"$(which chromium)\" \"$PLAYWRIGHT_BROWSERS_DIR/chromium-$CHROMIUM_REV/$CHROME_DIR/chrome\"\n      \n      # Headless shell (Playwright uses underscores in path, not hyphens)\n      mkdir -p \"$PLAYWRIGHT_BROWSERS_DIR/chromium_headless_shell-$CHROMIUM_HEADLESS_REV/$CHROME_DIR\"\n      ln -sf \"$(which chromium)\" \"$PLAYWRIGHT_BROWSERS_DIR/chromium_headless_shell-$CHROMIUM_HEADLESS_REV/$CHROME_DIR/headless_shell\"\n      \n      # Link system ffmpeg\n      mkdir -p \"$PLAYWRIGHT_BROWSERS_DIR/ffmpeg-$FFMPEG_REV\"\n      ln -sf \"$(which ffmpeg)\" \"$PLAYWRIGHT_BROWSERS_DIR/ffmpeg-$FFMPEG_REV/ffmpeg-linux\"\n      \n      indent && echo -e \"{{ Foreground \\\"#ffffff\\\" \\\"✅ Chromium browsers linked.\\\" }}\\n\" \\\n        | gum format -t template\n    fi\n  fi\nfi\n\nindent && echo\n"
     },
     "profile": {
       "bash": "source \"$FLOX_PYTHON_UV_VENV_PATH/bin/activate\"\n",
@@ -57,6 +64,68 @@
     }
   },
   "packages": [
+    {
+      "attr_path": "chromium",
+      "broken": false,
+      "derivation": "/nix/store/g3g9067l3ccri5i46990cgcd1bhmj86p-chromium-138.0.7204.92.drv",
+      "description": "Open source web browser from Google",
+      "install_id": "chromium",
+      "license": "BSD-3-Clause",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=9807714d6944a957c2e036f84b0ff8caf9930bc0",
+      "name": "chromium-138.0.7204.92",
+      "pname": "chromium",
+      "rev": "9807714d6944a957c2e036f84b0ff8caf9930bc0",
+      "rev_count": 826938,
+      "rev_date": "2025-07-08T14:16:20Z",
+      "scrape_date": "2025-07-10T05:34:50.415723Z",
+      "stabilities": [
+        "staging",
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "138.0.7204.92",
+      "outputs_to_install": [
+        "out"
+      ],
+      "outputs": {
+        "out": "/nix/store/gqb59v0vslnb8lqc63nafnksppkgns20-chromium-138.0.7204.92",
+        "sandbox": "/nix/store/h52flgprc8hmq2675yqgqgiia5ga7p2n-chromium-138.0.7204.92-sandbox"
+      },
+      "system": "aarch64-linux",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
+      "attr_path": "chromium",
+      "broken": false,
+      "derivation": "/nix/store/6aar0c5cv262a9r1pxh647yjqbk267kv-chromium-138.0.7204.92.drv",
+      "description": "Open source web browser from Google",
+      "install_id": "chromium",
+      "license": "BSD-3-Clause",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=9807714d6944a957c2e036f84b0ff8caf9930bc0",
+      "name": "chromium-138.0.7204.92",
+      "pname": "chromium",
+      "rev": "9807714d6944a957c2e036f84b0ff8caf9930bc0",
+      "rev_count": 826938,
+      "rev_date": "2025-07-08T14:16:20Z",
+      "scrape_date": "2025-07-10T06:15:24.776276Z",
+      "stabilities": [
+        "staging",
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "138.0.7204.92",
+      "outputs_to_install": [
+        "out"
+      ],
+      "outputs": {
+        "out": "/nix/store/fxrbwm6kz68lakv3ksrcygrvpgfcsgwk-chromium-138.0.7204.92",
+        "sandbox": "/nix/store/74jbs1v2nilz8wvniyjln50phcd7sz7k-chromium-138.0.7204.92-sandbox"
+      },
+      "system": "x86_64-linux",
+      "group": "toplevel",
+      "priority": 5
+    },
     {
       "attr_path": "coreutils",
       "broken": false,
@@ -332,126 +401,6 @@
       "priority": 5
     },
     {
-      "attr_path": "firefox-esr",
-      "broken": false,
-      "derivation": "/nix/store/4rn7wmncla8d7grpfs3n1gw9wbd2l843-firefox-128.12.0esr.drv",
-      "description": "Web browser built from Firefox source tree",
-      "install_id": "firefox-esr",
-      "license": "MPL-2.0",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=9807714d6944a957c2e036f84b0ff8caf9930bc0",
-      "name": "firefox-128.12.0esr",
-      "pname": "firefox-esr",
-      "rev": "9807714d6944a957c2e036f84b0ff8caf9930bc0",
-      "rev_count": 826938,
-      "rev_date": "2025-07-08T14:16:20Z",
-      "scrape_date": "2025-07-10T05:14:30.803814Z",
-      "stabilities": [
-        "staging",
-        "unstable"
-      ],
-      "unfree": false,
-      "version": "128.12.0esr",
-      "outputs_to_install": [
-        "out"
-      ],
-      "outputs": {
-        "out": "/nix/store/caw8qb09lc54niyqf8szgqj1gspcnc81-firefox-128.12.0esr"
-      },
-      "system": "aarch64-darwin",
-      "group": "toplevel",
-      "priority": 5
-    },
-    {
-      "attr_path": "firefox-esr",
-      "broken": false,
-      "derivation": "/nix/store/dc60q2fzvsgsr5iikfhyxhggkbl04rcc-firefox-128.12.0esr.drv",
-      "description": "Web browser built from Firefox source tree",
-      "install_id": "firefox-esr",
-      "license": "MPL-2.0",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=9807714d6944a957c2e036f84b0ff8caf9930bc0",
-      "name": "firefox-128.12.0esr",
-      "pname": "firefox-esr",
-      "rev": "9807714d6944a957c2e036f84b0ff8caf9930bc0",
-      "rev_count": 826938,
-      "rev_date": "2025-07-08T14:16:20Z",
-      "scrape_date": "2025-07-10T05:34:51.100337Z",
-      "stabilities": [
-        "staging",
-        "unstable"
-      ],
-      "unfree": false,
-      "version": "128.12.0esr",
-      "outputs_to_install": [
-        "out"
-      ],
-      "outputs": {
-        "out": "/nix/store/mkh7cqhg9ya5q0bgnjhhy65qrd6qyn61-firefox-128.12.0esr"
-      },
-      "system": "aarch64-linux",
-      "group": "toplevel",
-      "priority": 5
-    },
-    {
-      "attr_path": "firefox-esr",
-      "broken": false,
-      "derivation": "/nix/store/z61fj4az9g8ncm7lvx1s9mskhxrdh4a9-firefox-128.12.0esr.drv",
-      "description": "Web browser built from Firefox source tree",
-      "install_id": "firefox-esr",
-      "license": "MPL-2.0",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=9807714d6944a957c2e036f84b0ff8caf9930bc0",
-      "name": "firefox-128.12.0esr",
-      "pname": "firefox-esr",
-      "rev": "9807714d6944a957c2e036f84b0ff8caf9930bc0",
-      "rev_count": 826938,
-      "rev_date": "2025-07-08T14:16:20Z",
-      "scrape_date": "2025-07-10T05:53:49.076862Z",
-      "stabilities": [
-        "staging",
-        "unstable"
-      ],
-      "unfree": false,
-      "version": "128.12.0esr",
-      "outputs_to_install": [
-        "out"
-      ],
-      "outputs": {
-        "out": "/nix/store/hybszjzgir7mkr462fd0095mn92943bl-firefox-128.12.0esr"
-      },
-      "system": "x86_64-darwin",
-      "group": "toplevel",
-      "priority": 5
-    },
-    {
-      "attr_path": "firefox-esr",
-      "broken": false,
-      "derivation": "/nix/store/l4mnh4wi9n924i3c8v296ygps67k381z-firefox-128.12.0esr.drv",
-      "description": "Web browser built from Firefox source tree",
-      "install_id": "firefox-esr",
-      "license": "MPL-2.0",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=9807714d6944a957c2e036f84b0ff8caf9930bc0",
-      "name": "firefox-128.12.0esr",
-      "pname": "firefox-esr",
-      "rev": "9807714d6944a957c2e036f84b0ff8caf9930bc0",
-      "rev_count": 826938,
-      "rev_date": "2025-07-08T14:16:20Z",
-      "scrape_date": "2025-07-10T06:15:25.562532Z",
-      "stabilities": [
-        "staging",
-        "unstable"
-      ],
-      "unfree": false,
-      "version": "128.12.0esr",
-      "outputs_to_install": [
-        "out"
-      ],
-      "outputs": {
-        "out": "/nix/store/rmnjnqil8lmjw4lpyk3bs52kmqkmk76y-firefox-128.12.0esr"
-      },
-      "system": "x86_64-linux",
-      "group": "toplevel",
-      "priority": 5
-    },
-    {
       "attr_path": "gcc-unwrapped",
       "broken": false,
       "derivation": "/nix/store/j3g0nypb7c707xxmlvhswbsgvlwkzpl1-gcc-14.3.0.drv",
@@ -586,126 +535,6 @@
         "libgcc": "/nix/store/h8x8m2vcaqd13sm794q5l3yrynbf3h0q-gcc-14.3.0-libgcc",
         "man": "/nix/store/54qknaqd8cv162sqqjvq2npgqvaplvlq-gcc-14.3.0-man",
         "out": "/nix/store/sa7j7cddyblhcb3ch3ds10w7nw75yjj1-gcc-14.3.0"
-      },
-      "system": "x86_64-linux",
-      "group": "toplevel",
-      "priority": 5
-    },
-    {
-      "attr_path": "geckodriver",
-      "broken": false,
-      "derivation": "/nix/store/azrci4f4qp2im5zy5v4w5v4yx4pn9b1r-geckodriver-0.36.0.drv",
-      "description": "Proxy for using W3C WebDriver-compatible clients to interact with Gecko-based browsers",
-      "install_id": "geckodriver",
-      "license": "MPL-2.0",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=9807714d6944a957c2e036f84b0ff8caf9930bc0",
-      "name": "geckodriver-0.36.0",
-      "pname": "geckodriver",
-      "rev": "9807714d6944a957c2e036f84b0ff8caf9930bc0",
-      "rev_count": 826938,
-      "rev_date": "2025-07-08T14:16:20Z",
-      "scrape_date": "2025-07-10T05:14:30.920255Z",
-      "stabilities": [
-        "staging",
-        "unstable"
-      ],
-      "unfree": false,
-      "version": "0.36.0",
-      "outputs_to_install": [
-        "out"
-      ],
-      "outputs": {
-        "out": "/nix/store/yvnj8fawaca2cfs3g212f0xxp6j7lknp-geckodriver-0.36.0"
-      },
-      "system": "aarch64-darwin",
-      "group": "toplevel",
-      "priority": 5
-    },
-    {
-      "attr_path": "geckodriver",
-      "broken": false,
-      "derivation": "/nix/store/8prf9b8yknjz8zq4p57zf5521h44ih4b-geckodriver-0.36.0.drv",
-      "description": "Proxy for using W3C WebDriver-compatible clients to interact with Gecko-based browsers",
-      "install_id": "geckodriver",
-      "license": "MPL-2.0",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=9807714d6944a957c2e036f84b0ff8caf9930bc0",
-      "name": "geckodriver-0.36.0",
-      "pname": "geckodriver",
-      "rev": "9807714d6944a957c2e036f84b0ff8caf9930bc0",
-      "rev_count": 826938,
-      "rev_date": "2025-07-08T14:16:20Z",
-      "scrape_date": "2025-07-10T05:34:51.304028Z",
-      "stabilities": [
-        "staging",
-        "unstable"
-      ],
-      "unfree": false,
-      "version": "0.36.0",
-      "outputs_to_install": [
-        "out"
-      ],
-      "outputs": {
-        "out": "/nix/store/qi0jxmklpwfwx0dg76n26j1gzyqdqwac-geckodriver-0.36.0"
-      },
-      "system": "aarch64-linux",
-      "group": "toplevel",
-      "priority": 5
-    },
-    {
-      "attr_path": "geckodriver",
-      "broken": false,
-      "derivation": "/nix/store/qn9i9giw6jzdjq4cy2cbgm7cvwj9gm8s-geckodriver-0.36.0.drv",
-      "description": "Proxy for using W3C WebDriver-compatible clients to interact with Gecko-based browsers",
-      "install_id": "geckodriver",
-      "license": "MPL-2.0",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=9807714d6944a957c2e036f84b0ff8caf9930bc0",
-      "name": "geckodriver-0.36.0",
-      "pname": "geckodriver",
-      "rev": "9807714d6944a957c2e036f84b0ff8caf9930bc0",
-      "rev_count": 826938,
-      "rev_date": "2025-07-08T14:16:20Z",
-      "scrape_date": "2025-07-10T05:53:49.192621Z",
-      "stabilities": [
-        "staging",
-        "unstable"
-      ],
-      "unfree": false,
-      "version": "0.36.0",
-      "outputs_to_install": [
-        "out"
-      ],
-      "outputs": {
-        "out": "/nix/store/gwp3r9fnhp5sg9x33yw5yjkgs8n23sim-geckodriver-0.36.0"
-      },
-      "system": "x86_64-darwin",
-      "group": "toplevel",
-      "priority": 5
-    },
-    {
-      "attr_path": "geckodriver",
-      "broken": false,
-      "derivation": "/nix/store/k2bvhrkx257ki8n4y7784ndyz6zg3kg5-geckodriver-0.36.0.drv",
-      "description": "Proxy for using W3C WebDriver-compatible clients to interact with Gecko-based browsers",
-      "install_id": "geckodriver",
-      "license": "MPL-2.0",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=9807714d6944a957c2e036f84b0ff8caf9930bc0",
-      "name": "geckodriver-0.36.0",
-      "pname": "geckodriver",
-      "rev": "9807714d6944a957c2e036f84b0ff8caf9930bc0",
-      "rev_count": 826938,
-      "rev_date": "2025-07-08T14:16:20Z",
-      "scrape_date": "2025-07-10T06:15:25.792107Z",
-      "stabilities": [
-        "staging",
-        "unstable"
-      ],
-      "unfree": false,
-      "version": "0.36.0",
-      "outputs_to_install": [
-        "out"
-      ],
-      "outputs": {
-        "out": "/nix/store/07c4v4nri9ahaqbdl2bm8lgx9yb5mi8w-geckodriver-0.36.0"
       },
       "system": "x86_64-linux",
       "group": "toplevel",
@@ -966,6 +795,134 @@
         "doc": "/nix/store/5qly4lwxrq5r3x472g2w35rz50b54a6n-jq-1.8.0-doc",
         "man": "/nix/store/njrgxwqnifcyh3x0v18v83ig179zccx0-jq-1.8.0-man",
         "out": "/nix/store/qqx05qwhhmbrviw3iskgaigjxhczqhvx-jq-1.8.0"
+      },
+      "system": "x86_64-linux",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
+      "attr_path": "nodejs",
+      "broken": false,
+      "derivation": "/nix/store/441r91a4dyq7kz1c4mnr1nzjzk1b2ira-nodejs-22.16.0.drv",
+      "description": "Event-driven I/O framework for the V8 JavaScript engine",
+      "install_id": "nodejs",
+      "license": "MIT",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=9807714d6944a957c2e036f84b0ff8caf9930bc0",
+      "name": "nodejs-22.16.0",
+      "pname": "nodejs",
+      "rev": "9807714d6944a957c2e036f84b0ff8caf9930bc0",
+      "rev_count": 826938,
+      "rev_date": "2025-07-08T14:16:20Z",
+      "scrape_date": "2025-07-10T05:14:33.544214Z",
+      "stabilities": [
+        "staging",
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "22.16.0",
+      "outputs_to_install": [
+        "out"
+      ],
+      "outputs": {
+        "dev": "/nix/store/78lk3dc4gmcnzmxm4izkvbvr56jdz1x9-nodejs-22.16.0-dev",
+        "libv8": "/nix/store/4fwln9knqmx59msrm0i5di5r7p18kf4p-nodejs-22.16.0-libv8",
+        "out": "/nix/store/abxz7wpw5kwaijzzmf8rl4ga981vk8pc-nodejs-22.16.0"
+      },
+      "system": "aarch64-darwin",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
+      "attr_path": "nodejs",
+      "broken": false,
+      "derivation": "/nix/store/7v7707mb89xi7ma04cw531xak1zwy22l-nodejs-22.16.0.drv",
+      "description": "Event-driven I/O framework for the V8 JavaScript engine",
+      "install_id": "nodejs",
+      "license": "MIT",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=9807714d6944a957c2e036f84b0ff8caf9930bc0",
+      "name": "nodejs-22.16.0",
+      "pname": "nodejs",
+      "rev": "9807714d6944a957c2e036f84b0ff8caf9930bc0",
+      "rev_count": 826938,
+      "rev_date": "2025-07-08T14:16:20Z",
+      "scrape_date": "2025-07-10T05:35:00.656375Z",
+      "stabilities": [
+        "staging",
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "22.16.0",
+      "outputs_to_install": [
+        "out"
+      ],
+      "outputs": {
+        "dev": "/nix/store/sbp52l9kksr47xxkfvn8ap2lkygxj8sk-nodejs-22.16.0-dev",
+        "libv8": "/nix/store/332a0dqmiqf32mjzs8j9bia9n6rlqmga-nodejs-22.16.0-libv8",
+        "out": "/nix/store/jssj55ihylzsnzc83cybad4fgfs3bcny-nodejs-22.16.0"
+      },
+      "system": "aarch64-linux",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
+      "attr_path": "nodejs",
+      "broken": false,
+      "derivation": "/nix/store/w8k8k5spym6yqia6xhf46ln6b07gpk62-nodejs-22.16.0.drv",
+      "description": "Event-driven I/O framework for the V8 JavaScript engine",
+      "install_id": "nodejs",
+      "license": "MIT",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=9807714d6944a957c2e036f84b0ff8caf9930bc0",
+      "name": "nodejs-22.16.0",
+      "pname": "nodejs",
+      "rev": "9807714d6944a957c2e036f84b0ff8caf9930bc0",
+      "rev_count": 826938,
+      "rev_date": "2025-07-08T14:16:20Z",
+      "scrape_date": "2025-07-10T05:53:51.925800Z",
+      "stabilities": [
+        "staging",
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "22.16.0",
+      "outputs_to_install": [
+        "out"
+      ],
+      "outputs": {
+        "dev": "/nix/store/y48cb55420c58rfg54mh3rqiw2bfhdqs-nodejs-22.16.0-dev",
+        "libv8": "/nix/store/qwmhg3jf6b7jzgnjjiw6v84fs9bakfps-nodejs-22.16.0-libv8",
+        "out": "/nix/store/swzij8xmzv1c81rvhcf2fzlnarjpjcnb-nodejs-22.16.0"
+      },
+      "system": "x86_64-darwin",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
+      "attr_path": "nodejs",
+      "broken": false,
+      "derivation": "/nix/store/rc4grl39rx1sp3fyf5wsmnp9ksa9a0v5-nodejs-22.16.0.drv",
+      "description": "Event-driven I/O framework for the V8 JavaScript engine",
+      "install_id": "nodejs",
+      "license": "MIT",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=9807714d6944a957c2e036f84b0ff8caf9930bc0",
+      "name": "nodejs-22.16.0",
+      "pname": "nodejs",
+      "rev": "9807714d6944a957c2e036f84b0ff8caf9930bc0",
+      "rev_count": 826938,
+      "rev_date": "2025-07-08T14:16:20Z",
+      "scrape_date": "2025-07-10T06:15:37.077120Z",
+      "stabilities": [
+        "staging",
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "22.16.0",
+      "outputs_to_install": [
+        "out"
+      ],
+      "outputs": {
+        "dev": "/nix/store/f4mwqm5lg34430cx759rpn2ibf652s8j-nodejs-22.16.0-dev",
+        "libv8": "/nix/store/a6jybrxgmdpgy7kyxjh9sv97cp2xgw5h-nodejs-22.16.0-libv8",
+        "out": "/nix/store/pjr8jcds298brhwy1d3rmym9vayxhbfs-nodejs-22.16.0"
       },
       "system": "x86_64-linux",
       "group": "toplevel",
@@ -1497,6 +1454,106 @@
       },
       "system": "x86_64-linux",
       "group": "toplevel",
+      "priority": 5
+    },
+    {
+      "install_id": "playwright_driver",
+      "locked-url": "github:pietdevries94/playwright-web-flake/276c607189273ab3b4a3e163fed738bef7f18a7c?narHash=sha256-TKpMwDUR6dJ3JG0Ypw9y/tIiZbqEVnzGWbsqZRMoqgs%3D",
+      "flake-description": "A flake for playwright",
+      "locked-flake-attr-path": "packages.aarch64-darwin.playwright-driver",
+      "derivation": "/nix/store/1fyy625ynj1ny4124hf0279g4p9wy69c-playwright-driver-1.57.0.drv",
+      "outputs": {
+        "out": "/nix/store/nf32195zyhb3w8f52gnqd0mqf8wgav4q-playwright-driver-1.57.0"
+      },
+      "output-names": [
+        "out"
+      ],
+      "outputs-to-install": [
+        "out"
+      ],
+      "requested-outputs-to-install": [],
+      "package-system": "aarch64-darwin",
+      "system": "aarch64-darwin",
+      "name": "playwright-driver-1.57.0",
+      "pname": "playwright-driver",
+      "version": "1.57.0",
+      "broken": false,
+      "unfree": false,
+      "priority": 5
+    },
+    {
+      "install_id": "playwright_driver",
+      "locked-url": "github:pietdevries94/playwright-web-flake/276c607189273ab3b4a3e163fed738bef7f18a7c?narHash=sha256-TKpMwDUR6dJ3JG0Ypw9y/tIiZbqEVnzGWbsqZRMoqgs%3D",
+      "flake-description": "A flake for playwright",
+      "locked-flake-attr-path": "packages.aarch64-linux.playwright-driver",
+      "derivation": "/nix/store/apzk34jrkf4bcvsm8q1sbd44i6icjy6y-playwright-driver-1.57.0.drv",
+      "outputs": {
+        "out": "/nix/store/4wm7ims6r555cc7ik4nim41gs648v6qd-playwright-driver-1.57.0"
+      },
+      "output-names": [
+        "out"
+      ],
+      "outputs-to-install": [
+        "out"
+      ],
+      "requested-outputs-to-install": [],
+      "package-system": "aarch64-linux",
+      "system": "aarch64-linux",
+      "name": "playwright-driver-1.57.0",
+      "pname": "playwright-driver",
+      "version": "1.57.0",
+      "broken": false,
+      "unfree": false,
+      "priority": 5
+    },
+    {
+      "install_id": "playwright_driver",
+      "locked-url": "github:pietdevries94/playwright-web-flake/276c607189273ab3b4a3e163fed738bef7f18a7c?narHash=sha256-TKpMwDUR6dJ3JG0Ypw9y/tIiZbqEVnzGWbsqZRMoqgs%3D",
+      "flake-description": "A flake for playwright",
+      "locked-flake-attr-path": "packages.x86_64-darwin.playwright-driver",
+      "derivation": "/nix/store/yczjnh3hl5h1yd7n7ai3agfwlikn844n-playwright-driver-1.57.0.drv",
+      "outputs": {
+        "out": "/nix/store/lf6vj1sfw16w5qr652y74laz2sd7hw4f-playwright-driver-1.57.0"
+      },
+      "output-names": [
+        "out"
+      ],
+      "outputs-to-install": [
+        "out"
+      ],
+      "requested-outputs-to-install": [],
+      "package-system": "x86_64-darwin",
+      "system": "x86_64-darwin",
+      "name": "playwright-driver-1.57.0",
+      "pname": "playwright-driver",
+      "version": "1.57.0",
+      "broken": false,
+      "unfree": false,
+      "priority": 5
+    },
+    {
+      "install_id": "playwright_driver",
+      "locked-url": "github:pietdevries94/playwright-web-flake/276c607189273ab3b4a3e163fed738bef7f18a7c?narHash=sha256-TKpMwDUR6dJ3JG0Ypw9y/tIiZbqEVnzGWbsqZRMoqgs%3D",
+      "flake-description": "A flake for playwright",
+      "locked-flake-attr-path": "packages.x86_64-linux.playwright-driver",
+      "derivation": "/nix/store/z94pvn2qzja2gch118rq7ddn5k8nwcc6-playwright-driver-1.57.0.drv",
+      "outputs": {
+        "out": "/nix/store/c1kv7jj3v0p6qaks3ymcn2b0sjwvg4xn-playwright-driver-1.57.0"
+      },
+      "output-names": [
+        "out"
+      ],
+      "outputs-to-install": [
+        "out"
+      ],
+      "requested-outputs-to-install": [],
+      "package-system": "x86_64-linux",
+      "system": "x86_64-linux",
+      "name": "playwright-driver-1.57.0",
+      "pname": "playwright-driver",
+      "version": "1.57.0",
+      "broken": false,
+      "unfree": false,
       "priority": 5
     }
   ]
