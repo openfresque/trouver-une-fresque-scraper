@@ -3,14 +3,12 @@ import time
 import json
 import logging
 import re
+from contextlib import contextmanager
 
-from selenium.common.exceptions import TimeoutException
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+from playwright.sync_api import sync_playwright, Page, TimeoutError as PlaywrightTimeoutError
 
 from trouver_une_fresque_scraper.db.records import get_record_dict
-from trouver_une_fresque_scraper.utils.date_and_time import get_dates_from_element, get_dates
+from trouver_une_fresque_scraper.utils.date_and_time import get_dates
 from trouver_une_fresque_scraper.utils.errors import (
     FreskError,
     FreskDateBadFormat,
@@ -22,163 +20,192 @@ from trouver_une_fresque_scraper.utils.keywords import (
 )
 from trouver_une_fresque_scraper.utils.language import detect_language_code
 from trouver_une_fresque_scraper.utils.location import get_address
-from trouver_une_fresque_scraper.utils.scraping import (
-    managed_driver,
-    retry_on_stale_element,
-    safe_find_element,
-    DEFAULT_TIMEOUT,
-    PAGE_LOAD_DELAY,
-    MAX_RETRIES,
-)
+
+DEFAULT_TIMEOUT = 10000  # milliseconds
+PAGE_LOAD_DELAY = 3
 
 
-def delete_cookies_overlay(driver):
-    """Remove cookie consent overlay if present using safe element handling."""
+@contextmanager
+def managed_browser(headless=False):
+    """Context manager for Playwright browser."""
+    playwright = None
+    browser = None
     try:
-        transcend_element = safe_find_element(
-            driver, By.CSS_SELECTOR, "#transcend-consent-manager", timeout=DEFAULT_TIMEOUT
+        playwright = sync_playwright().start()
+        browser = playwright.chromium.launch(headless=headless)
+        logging.info("Playwright browser initialized successfully")
+        yield browser
+    finally:
+        if browser:
+            browser.close()
+            logging.info("Browser closed successfully")
+        if playwright:
+            playwright.stop()
+
+
+def delete_cookies_overlay(page: Page):
+    """Remove cookie consent overlay if present."""
+    try:
+        # Wait a bit for the overlay to appear
+        page.wait_for_timeout(1000)
+
+        # The cookie consent is in a shadow DOM
+        # Use evaluate to handle shadow DOM reliably
+        clicked = page.evaluate(
+            """
+            () => {
+                const manager = document.querySelector('#transcend-consent-manager');
+                if (manager && manager.shadowRoot) {
+                    const buttons = manager.shadowRoot.querySelectorAll('button');
+                    for (const button of buttons) {
+                        const text = button.textContent || '';
+                        if (text.includes('Tout rejeter') || text.includes('Reject all')) {
+                            button.click();
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
+        """
         )
 
-        if transcend_element:
-            driver.execute_script(
-                "arguments[0].parentNode.removeChild(arguments[0]);", transcend_element
-            )
-            logging.debug("Cookie consent overlay removed")
+        if clicked:
+            logging.debug("Cookie consent rejected")
+            page.wait_for_timeout(500)
+        else:
+            logging.debug("Cookie consent overlay not found or already dismissed")
     except Exception as e:
-        logging.debug(f"Cookie consent overlay couldn't be removed: {e}")
+        logging.debug(f"Cookie consent overlay couldn't be handled: {e}")
 
 
-@retry_on_stale_element(max_attempts=MAX_RETRIES)
-def click_next_button(driver):
+def scroll_to_bottom(page: Page):
     """
-    Safely click the 'Show More' button with retry logic.
-
-    Scrolls the button into view and clicks it. Retries automatically
-    if the element becomes stale.
-    """
-    next_button = WebDriverWait(driver, DEFAULT_TIMEOUT).until(
-        EC.element_to_be_clickable(
-            (
-                By.CSS_SELECTOR,
-                "div.organizer-profile__section--content div.organizer-profile__show-more > button",
-            )
-        )
-    )
-
-    desired_y = (next_button.size["height"] / 2) + next_button.location["y"]
-    window_h = driver.execute_script("return window.innerHeight")
-    window_y = driver.execute_script("return window.pageYOffset")
-    current_y = (window_h / 2) + window_y
-    scroll_y_by = desired_y - current_y
-
-    driver.execute_script("window.scrollBy(0, arguments[0]);", scroll_y_by)
-    next_button.click()
-
-
-def scroll_to_bottom(driver):
-    """
-    Scroll to bottom of page, clicking 'Show More' buttons with improved error handling.
+    Scroll to bottom of page, clicking 'Show More' buttons.
 
     Continues scrolling and clicking until no more content can be loaded.
-    Uses retry logic for stale elements.
     """
     more_content = True
-    while more_content:
+    consecutive_failures = 0
+    max_failures = 3
+
+    while more_content and consecutive_failures < max_failures:
         logging.info("Scrolling to the bottom...")
         try:
-            driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-            time.sleep(5)  # Give the page some time to load new content
+            # Scroll down
+            page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
 
-            # Try to click the next button with retry logic
-            click_next_button(driver)
+            # Wait for any dynamic content to load
+            page.wait_for_timeout(1000)
 
-        except TimeoutException:
-            # No more "Show More" button found
-            more_content = False
-            logging.debug("Reached end of content")
+            # Try to click the next button
+            next_button = page.locator(
+                "div.organizer-profile__section--content div.organizer-profile__show-more > button"
+            ).first
+            if next_button.is_visible(timeout=2000):
+                next_button.scroll_into_view_if_needed(timeout=5000)
+                next_button.click()
+                consecutive_failures = 0  # Reset on success
+                # Wait after clicking to let content load
+                page.wait_for_timeout(1500)
+            else:
+                more_content = False
+                logging.debug("Reached end of content - no more buttons")
+
+        except PlaywrightTimeoutError:
+            consecutive_failures += 1
+            logging.debug(
+                f"Timeout during scrolling (attempt {consecutive_failures}/{max_failures})"
+            )
         except Exception as e:
-            logging.warning(f"Error during scrolling: {e}")
-            more_content = False
+            consecutive_failures += 1
+            logging.warning(
+                f"Error during scrolling (attempt {consecutive_failures}/{max_failures}): {e}"
+            )
+
+    if consecutive_failures >= max_failures:
+        logging.debug("Stopped scrolling after max failures reached")
 
 
 # ==================== Main Entry Point ====================
 
 
-def get_eventbrite_data(sources, service, options):
+def get_eventbrite_data(sources, service=None, options=None):
     """
-    Scrape EventBrite events with proper waits.
+    Scrape EventBrite events using Playwright.
 
     Args:
         sources: List of source page configurations (dicts with 'id' and 'url')
-        service: Selenium service instance
-        options: Selenium options instance
+        service: Unused (kept for compatibility)
+        options: Unused (kept for compatibility)
 
     Returns:
         List of event records
     """
     logging.info("Scraping data from eventbrite.fr")
 
-    # Use context manager for guaranteed cleanup
-    with managed_driver(service, options) as driver:
+    headless = False
+    if options and hasattr(options, "arguments") and len(options.arguments) > 0:
+        headless = "-headless" in options.arguments
+
+    with managed_browser(headless=headless) as browser:
+        context = browser.new_context()
+        page = context.new_page()
         records = []
 
-        for page in sources:
+        for source in sources:
             try:
-                logging.info(f"==================\nProcessing page {page}")
-                driver.get(page["url"])
+                logging.info(f"==================\nProcessing page {source}")
+                page.goto(source["url"], wait_until="domcontentloaded")
+
+                delete_cookies_overlay(page)
 
                 # Scroll to bottom to load all events
-                scroll_to_bottom(driver)
-                driver.execute_script("window.scrollTo(0, 0);")
+                scroll_to_bottom(page)
+                page.evaluate("window.scrollTo(0, 0)")
 
-                # Find future events container with safe handling
-                future_events = safe_find_element(
-                    driver,
-                    By.CSS_SELECTOR,
-                    'div[data-testid="organizer-profile__future-events"]',
-                    required=True,
-                )
-
-                event_card_divs = future_events.find_elements(By.CSS_SELECTOR, "div.event-card")
-                logging.info(f"Found {len(event_card_divs)} events")
+                # Wait for future events container
+                # page.wait_for_selector('div[data-testid="organizer-profile__future-events"]', timeout=DEFAULT_TIMEOUT)
 
                 # Extract links
-                elements = []
-                for event_card_div in event_card_divs:
-                    link_elements = event_card_div.find_elements(
-                        By.CSS_SELECTOR, "a.event-card-link"
-                    )
-                    elements.extend(link_elements)
+                event_cards = page.locator("div.event-card").all()
+                logging.info(f"Found {len(event_cards)} events")
 
                 links = []
-                for link_element in elements:
-                    href = link_element.get_attribute("href")
-                    if href:
-                        links.append(href)
+                for card in event_cards:
+                    link_elements = card.locator("a.event-card-link").all()
+                    for link_el in link_elements:
+                        href = link_el.get_attribute("href")
+                        if href:
+                            links.append(href)
+
                 links = np.unique(links)
 
                 # Process each event
                 for link in links:
-                    event_records = process_event_page(driver, link, page)
+                    event_records = process_event_page(page, link, source)
                     records.extend(event_records)
 
             except Exception as e:
                 logging.error(
-                    f"Failed to process organizer page {page.get('url', page)}: {e}", exc_info=True
+                    f"Failed to process organizer page {source.get('url', source)}: {e}",
+                    exc_info=True,
                 )
                 raise
+
+        context.close()
 
     return records
 
 
-def process_event_page(driver, link, page):
+def process_event_page(page: Page, link: str, source: dict):
     """
-    Process a single event page with improved error handling.
+    Process a single event page.
 
     Args:
-        driver: Selenium WebDriver instance
+        page: Playwright Page instance
         link: URL of the event page
-        page: Source page configuration dict
+        source: Source page configuration dict
 
     Returns:
         List of event records (can be multiple for events with multiple dates)
@@ -187,40 +214,43 @@ def process_event_page(driver, link, page):
     records = []
 
     try:
-        driver.get(link)
-        delete_cookies_overlay(driver)
-        time.sleep(PAGE_LOAD_DELAY)  # Pages are quite long to load
+        page.goto(link, wait_until="domcontentloaded")
+        delete_cookies_overlay(page)
 
         ################################################################
         # Has it expired?
         ################################################################
-        expired_badge = safe_find_element(
-            driver, By.XPATH, '//div[@data-testid="enhancedExpiredEventsBadge"]', timeout=0
-        )
-        if expired_badge:
-            # If the element has children elements, it is enabled
-            if expired_badge.find_elements(By.XPATH, "./*"):
-                logging.info("Rejecting record: event expired")
-                return records
+        expired_badge = page.locator('div[data-testid="enhancedExpiredEventsBadge"]').first
+        try:
+            if expired_badge.is_visible(timeout=1000):
+                # If the element has children, it is enabled
+                children = expired_badge.locator("*").count()
+                if children > 0:
+                    logging.info("Rejecting record: event expired")
+                    return records
+        except Exception:
+            pass
 
         # Check alternative expired badge
-        alt_expired_badge = safe_find_element(
-            driver, By.CSS_SELECTOR, "div.enhanced-expired-badge", timeout=0
-        )
-        if alt_expired_badge:
-            logging.info("Rejecting record: event expired")
-            return records
+        alt_expired_badge = page.locator("div.enhanced-expired-badge").first
+        try:
+            if alt_expired_badge.is_visible(timeout=1000):
+                logging.info("Rejecting record: event expired")
+                return records
+        except Exception:
+            pass
 
         ################################################################
         # Is it full?
         ################################################################
         sold_out = False
-        sold_out_badge = safe_find_element(
-            driver, By.XPATH, '//div[@data-testid="salesEndedMessage"]', timeout=0
-        )
-
-        if sold_out_badge:
-            sold_out = bool(sold_out_badge.find_elements(By.XPATH, "./*"))
+        sold_out_badge = page.locator('div[data-testid="salesEndedMessage"]').first
+        try:
+            if sold_out_badge.is_visible(timeout=1000):
+                children_count = sold_out_badge.locator("*").count()
+                sold_out = children_count > 0
+        except Exception:
+            pass
 
         if sold_out:
             # We reject sold out events as the Eventbrite UX hides
@@ -231,8 +261,8 @@ def process_event_page(driver, link, page):
         ################################################################
         # Parse event title
         ################################################################
-        title_el = safe_find_element(driver, By.TAG_NAME, "h1", required=True)
-        title = title_el.text
+        title_el = page.locator("h1").first
+        title = title_el.text_content()
 
         if is_plenary(title):
             logging.info("Rejecting record: plénière")
@@ -243,11 +273,12 @@ def process_event_page(driver, link, page):
         ################################################################
         online = is_online(title)
         if not online:
-            short_location_el = safe_find_element(
-                driver, By.CSS_SELECTOR, "span.start-date-and-location__location", timeout=0
-            )
-            if short_location_el:
-                online = is_online(short_location_el.text)
+            short_location_el = page.locator("span.start-date-and-location__location").first
+            try:
+                if short_location_el.is_visible(timeout=1000):
+                    online = is_online(short_location_el.text_content())
+            except Exception:
+                pass
 
         ################################################################
         # Location data
@@ -263,18 +294,20 @@ def process_event_page(driver, link, page):
         country_code = ""
 
         if not online:
-            full_location_el = safe_find_element(
-                driver,
-                By.CSS_SELECTOR,
-                'div[class^="Location-module__addressWrapper___"',
-                timeout=DEFAULT_TIMEOUT,
-            )
-
-            if not full_location_el:
+            full_location_el = page.locator(
+                'div[class^="Location-module__addressWrapper___"]'
+            ).first
+            try:
+                full_location_el.wait_for(state="visible", timeout=DEFAULT_TIMEOUT)
+                # Get inner text which preserves newlines for stacked elements
+                full_location = full_location_el.inner_text()
+                # Replace newlines with commas (stacked elements), then normalize spaces
+                full_location = full_location.replace("\n", ", ")
+                # Remove multiple spaces but keep the commas
+                full_location = " ".join(full_location.split())
+            except Exception:
                 logging.error(f"Location element not found for offline event {link}.")
                 return records
-
-            full_location = full_location_el.text.replace("\n", ", ")
 
             try:
                 address_dict = get_address(full_location)
@@ -295,15 +328,13 @@ def process_event_page(driver, link, page):
         ################################################################
         # Description
         ################################################################
-        description_el = safe_find_element(
-            driver, By.CSS_SELECTOR, "div.event-description", timeout=DEFAULT_TIMEOUT
-        )
-
-        if not description_el:
+        description_el = page.locator("div.event-description").first
+        try:
+            description_el.wait_for(state="visible", timeout=DEFAULT_TIMEOUT)
+            description = description_el.text_content()
+        except Exception:
             logging.info("Rejecting record: Description not found.")
             return records
-
-        description = description_el.text
 
         ################################################################
         # Training?
@@ -320,36 +351,33 @@ def process_event_page(driver, link, page):
         ################################################################
         event_info = []
 
-        # Try to find multiple date selector
-        date_time_div = safe_find_element(
-            driver, By.CSS_SELECTOR, "div.select-date-and-time", timeout=DEFAULT_TIMEOUT
-        )
-        # tbouvier: I think that this selector is actually obsolete. This was refering to
-        # a carousel of dates that EventBrite used to have a while ago.
-        if date_time_div:
-            # Multiple events on this page
-            driver.execute_script("window.scrollBy(0, arguments[0]);", 800)
+        # Try to find multiple date selector (obsolete carousel)
+        date_time_div = page.locator("div.select-date-and-time").first
+        try:
+            has_carousel = date_time_div.is_visible(timeout=2000)
+        except Exception:
+            has_carousel = False
 
-            li_elements = date_time_div.find_elements(By.CSS_SELECTOR, "li:not([data-heap-id])")
+        if has_carousel:
+            # Multiple events on this page (old carousel - likely obsolete)
+            page.evaluate("window.scrollBy(0, 800)")
+
+            li_elements = date_time_div.locator("li:not([data-heap-id])").all()
 
             for li in li_elements:
                 try:
-                    clickable_li = WebDriverWait(driver, DEFAULT_TIMEOUT).until(
-                        EC.element_to_be_clickable(li)
-                    )
-                    clickable_li.click()
+                    li.click()
 
                     ################################################################
                     # Dates
                     ################################################################
-                    date_info_el = safe_find_element(
-                        driver, By.CSS_SELECTOR, "time.start-date-and-location__date", required=True
-                    )
+                    date_info_el = page.locator("time.start-date-and-location__date").first
+                    date_info_el.wait_for(state="visible", timeout=DEFAULT_TIMEOUT)
 
                     try:
-                        event_start_datetime, event_end_datetime = get_dates_from_element(
-                            date_info_el
-                        )
+                        # Extract text content for parsing
+                        date_text = date_info_el.text_content()
+                        event_start_datetime, event_end_datetime = get_dates(date_text)
                     except FreskDateBadFormat as error:
                         logging.info(f"Reject record: {error}")
                         continue
@@ -357,17 +385,14 @@ def process_event_page(driver, link, page):
                     ################################################################
                     # Parse tickets link
                     ################################################################
-                    tickets_link = driver.current_url
+                    tickets_link = page.url
 
                     ################################################################
                     # Parse event id
                     ################################################################
                     uuid = re.search(r"/e/([^/?]+)", tickets_link).group(1)
 
-                    # Selenium clicks on "sold out" cards (li elements), but this
-                    # has no effect. Worse, this adds the previous non-sold out
-                    # event another time. One can detect such cases by scanning
-                    # through previous event ids.
+                    # Check for duplicates
                     already_scanned = False
                     for event in event_info:
                         if uuid in event[0]:
@@ -390,43 +415,48 @@ def process_event_page(driver, link, page):
             ################################################################
             # Single event with multiple dates (a "collection").
             ################################################################
-            check_availability_btn = safe_find_element(
-                driver, By.CSS_SELECTOR, "button[id^='check-availability-btn-']", timeout=0
-            )
+            check_availability_btn = page.locator("button[id^='check-availability-btn-']").first
 
-            if check_availability_btn:
+            try:
+                has_collection_button = check_availability_btn.is_visible(timeout=1000)
+            except Exception:
+                has_collection_button = False
+
+            if has_collection_button:
                 # Click the button to open the modal
                 try:
                     logging.info("Found EventBrite collection, clicking availability button...")
                     check_availability_btn.click()
 
-                    # Wait for modal to load by waiting for first date wrapper element to appear
+                    # Wait for modal to load
                     logging.debug("Waiting for modal to load...")
                     time.sleep(PAGE_LOAD_DELAY)  # Give initial time for modal animation
 
-                    # Switch to iframe if modal content is in an iframe
-                    iframe = safe_find_element(
-                        driver,
-                        By.CSS_SELECTOR,
-                        'iframe[id*="eventbrite-widget"], iframe[class*="modal"], iframe[title*="availability"]',
-                        timeout=DEFAULT_TIMEOUT,
-                        required=False,
-                    )
-                    if iframe:
+                    # Check for iframe
+                    iframe_locator = page.frame_locator(
+                        'iframe[id*="eventbrite-widget"], iframe[class*="modal"], iframe[title*="availability"]'
+                    ).first
+                    modal_page = None
+                    try:
+                        # Try to access iframe content
+                        test_element = iframe_locator.locator("body").first
+                        test_element.wait_for(state="attached", timeout=2000)
+                        modal_page = iframe_locator
                         logging.debug("Switching to iframe for modal content...")
-                        driver.switch_to.frame(iframe)
+                    except Exception:
+                        # No iframe, use main page
+                        modal_page = page
 
                     ################################################################
                     # Check which type of modal we have
                     ################################################################
 
-                    # Type 1: Simple list with date wrappers (one or more dates with time slots shown)
-                    date_wrappers = driver.find_elements(By.CSS_SELECTOR, 'p[class*="dateWrapper"]')
+                    # Type 1: Simple list with date wrappers
+                    date_wrappers = modal_page.locator('p[class*="dateWrapper"]').all()
                     # Type 2: Calendar/carousel with clickable date cards
-                    calendar_date_cards = driver.find_elements(
-                        By.CSS_SELECTOR,
-                        'div[class*="CompactCalendar"] div[class*="compactChoiceCardContainer"]',
-                    )
+                    calendar_date_cards = modal_page.locator(
+                        'div[class*="CompactCalendar"] div[class*="compactChoiceCardContainer"]'
+                    ).all()
 
                     if calendar_date_cards:
                         ################################################################
@@ -439,37 +469,21 @@ def process_event_page(driver, link, page):
                         # Process each date card in the calendar
                         for card_index, date_card in enumerate(calendar_date_cards):
                             try:
-                                # Extract date information from the card before clicking
-                                weekday_el = date_card.find_element(
-                                    By.CSS_SELECTOR, 'p[class*="weekday"]'
-                                )
-                                day_num_el = date_card.find_element(
-                                    By.CSS_SELECTOR, 'p[class*="dateText"]'
-                                )
-                                time_slot_el = date_card.find_element(
-                                    By.CSS_SELECTOR, 'p[class*="timeSlot"]'
-                                )
+                                # Extract date information from the card
+                                weekday_el = date_card.locator('p[class*="weekday"]').first
+                                day_num_el = date_card.locator('p[class*="dateText"]').first
+                                time_slot_el = date_card.locator('p[class*="timeSlot"]').first
 
-                                weekday = weekday_el.text  # e.g., "SAT"
-                                day_num = day_num_el.text  # e.g., "24"
-                                time_slot = time_slot_el.text  # e.g., "9:00 am"
+                                weekday = weekday_el.text_content()  # e.g., "SAT"
+                                day_num = day_num_el.text_content()  # e.g., "24"
+                                time_slot = time_slot_el.text_content()  # e.g., "9:00 am"
 
-                                # Get the month by finding the parent CompactCalendar_compactDateGrid
-                                # and then looking for the preceding monthName sibling
+                                # Get the month from the parent structure
                                 month = "Unknown"
                                 try:
-                                    # Navigate to the parent grid container
-                                    date_grid = date_card.find_element(
-                                        By.XPATH,
-                                        "./ancestor::div[contains(@class, 'compactDateGrid')]",
-                                    )
-                                    # Get the parent Stack_root that contains both month name and grid
-                                    stack_parent = date_grid.find_element(By.XPATH, "./parent::div")
-                                    # Find the month name in the same parent
-                                    month_header = stack_parent.find_element(
-                                        By.CSS_SELECTOR, 'p[class*="monthName"]'
-                                    )
-                                    month = month_header.text  # e.g., "January"
+                                    # Try to find month header in the parent structure
+                                    month_header = modal_page.locator('p[class*="monthName"]').first
+                                    month = month_header.text_content()  # e.g., "January"
                                 except Exception as e:
                                     logging.debug(f"Could not find month header: {e}")
 
@@ -478,12 +492,9 @@ def process_event_page(driver, link, page):
                                 )
 
                                 # Format the date string for parsing
-                                # e.g., "SAT, January 24 9:00 am"
                                 date_str = f"{weekday}, {month} {day_num} {time_slot}"
 
                                 try:
-                                    # Parse the date - we may need to add end time logic
-                                    # For now, assume default duration if no end time
                                     event_start_datetime, event_end_datetime = get_dates(date_str)
                                 except FreskDateBadFormat as error:
                                     logging.warning(
@@ -521,30 +532,27 @@ def process_event_page(driver, link, page):
                         # Process each date
                         for date_wrapper in date_wrappers:
                             try:
-                                date_text = date_wrapper.text
+                                date_text = date_wrapper.text_content()
                                 logging.debug(f"Processing date: {date_text}")
 
-                                # Click on the date wrapper or its parent card to reveal time slots
+                                # Click on the date wrapper's parent card to reveal time slots
                                 try:
-                                    # Try to find the clickable parent (EventInfoCard or similar)
-                                    clickable_parent = date_wrapper.find_element(
-                                        By.XPATH,
-                                        "./ancestor::div[contains(@class, 'EventInfoCard')]",
-                                    )
+                                    clickable_parent = date_wrapper.locator(
+                                        'xpath=ancestor::div[contains(@class, "EventInfoCard")]'
+                                    ).first
                                     clickable_parent.click()
                                     logging.debug(f"Clicked on date card for: {date_text}")
 
-                                    # Wait for time slots to load - use explicit wait for time slot list to appear
+                                    # Wait for time slots to load
                                     logging.debug("Waiting for time slots to load...")
-                                    time_slot_list_loaded = safe_find_element(
-                                        driver,
-                                        By.CSS_SELECTOR,
-                                        'ul[class*="TimeSlotList"]',
-                                        timeout=DEFAULT_TIMEOUT,
-                                        required=False,
-                                    )
-
-                                    if not time_slot_list_loaded:
+                                    time_slot_list = modal_page.locator(
+                                        'ul[class*="TimeSlotList"]'
+                                    ).first
+                                    try:
+                                        time_slot_list.wait_for(
+                                            state="visible", timeout=DEFAULT_TIMEOUT
+                                        )
+                                    except Exception:
                                         logging.warning(
                                             f"Time slot list did not load for date: {date_text}"
                                         )
@@ -556,11 +564,10 @@ def process_event_page(driver, link, page):
                                 except Exception as e:
                                     logging.debug(f"Could not click date card: {e}")
 
-                                # Find the time slots - search more broadly in the entire iframe/modal
-                                # Look for TimeSlotList ul elements in the entire document
-                                all_time_slot_lists = driver.find_elements(
-                                    By.CSS_SELECTOR, 'ul[class*="TimeSlotList"]'
-                                )
+                                # Find all time slots
+                                all_time_slot_lists = modal_page.locator(
+                                    'ul[class*="TimeSlotList"]'
+                                ).all()
 
                                 if not all_time_slot_lists:
                                     logging.warning(
@@ -572,18 +579,17 @@ def process_event_page(driver, link, page):
                                     f"Found {len(all_time_slot_lists)} time slot lists in modal"
                                 )
 
-                                # Extract time slot data immediately to avoid stale element issues
+                                # Extract time slot data
                                 time_slots_data = []
                                 for time_slot_list in all_time_slot_lists:
-                                    time_slot_lis = time_slot_list.find_elements(By.TAG_NAME, "li")
+                                    time_slot_lis = time_slot_list.locator("li").all()
                                     for time_slot_li in time_slot_lis:
                                         try:
-                                            # Extract text immediately before DOM can change
-                                            time_element = time_slot_li.find_element(
-                                                By.CSS_SELECTOR, 'p[class*="sessionText"]'
-                                            )
-                                            time_text = time_element.text
-                                            if time_text:  # Only add if we got actual text
+                                            time_element = time_slot_li.locator(
+                                                'p[class*="sessionText"]'
+                                            ).first
+                                            time_text = time_element.text_content()
+                                            if time_text:
                                                 time_slots_data.append(time_text)
                                         except Exception as e:
                                             logging.debug(f"Could not extract time slot text: {e}")
@@ -603,11 +609,9 @@ def process_event_page(driver, link, page):
                                         logging.debug(f"Processing time slot: {time_text}")
 
                                         # Combine date and time for parsing
-                                        # Format: "Sat, Feb 14 9:00 am - 12:30 pm"
                                         combined_text = f"{date_text} {time_text}"
 
                                         try:
-                                            # Use get_dates directly to parse the text
                                             event_start_datetime, event_end_datetime = get_dates(
                                                 combined_text
                                             )
@@ -619,7 +623,6 @@ def process_event_page(driver, link, page):
 
                                         # Generate a unique UUID for this specific date/time combo
                                         base_uuid = re.search(r"/e/([^/?]+)", link).group(1)
-                                        # Create unique ID by combining base UUID with date/time hash
                                         unique_suffix = hash(combined_text) % 10000
                                         uuid = f"{base_uuid}-{unique_suffix}"
 
@@ -642,33 +645,28 @@ def process_event_page(driver, link, page):
                             except Exception as e:
                                 logging.warning(f"Failed to process date wrapper: {e}")
                                 continue
+
                     if not event_info:
                         logging.error(f"No valid events extracted from collection for {link}.")
-                        driver.switch_to.default_content()
                         return records
-
-                    # Switch back to default content after processing modal
-                    driver.switch_to.default_content()
-                    logging.debug("Switched back to default content")
 
                 except Exception as e:
                     logging.error(
                         f"Failed to process EventBrite collection for {link}: {e}", exc_info=True
                     )
-                    # Make sure to switch back even on error
-                    driver.switch_to.default_content()
                     return records
             else:
                 # Regular single event
                 ################################################################
                 # Dates
                 ################################################################
-                date_info_el = safe_find_element(
-                    driver, By.CSS_SELECTOR, "time.start-date-and-location__date", required=True
-                )
+                date_info_el = page.locator("time.start-date-and-location__date").first
+                date_info_el.wait_for(state="visible", timeout=DEFAULT_TIMEOUT)
 
                 try:
-                    event_start_datetime, event_end_datetime = get_dates_from_element(date_info_el)
+                    # Extract text content for parsing
+                    date_text = date_info_el.text_content()
+                    event_start_datetime, event_end_datetime = get_dates(date_text)
                 except FreskDateBadFormat as error:
                     logging.info(f"Reject record: {error}")
                     return records
@@ -676,7 +674,7 @@ def process_event_page(driver, link, page):
                 ################################################################
                 # Parse tickets link
                 ################################################################
-                tickets_link = driver.current_url
+                tickets_link = page.url
 
                 ################################################################
                 # Parse event id
@@ -692,11 +690,11 @@ def process_event_page(driver, link, page):
             uuid,
             event_start_datetime,
             event_end_datetime,
-            link,
+            event_link,
         ) in enumerate(event_info):
             record = get_record_dict(
-                f"{page['id']}-{uuid}",
-                page["id"],
+                f"{source['id']}-{uuid}",
+                source["id"],
                 title,
                 event_start_datetime,
                 event_end_datetime,
@@ -709,7 +707,7 @@ def process_event_page(driver, link, page):
                 country_code,
                 latitude,
                 longitude,
-                page.get(
+                source.get(
                     "language_code",
                     detect_language_code(title, description),
                 ),
@@ -717,14 +715,19 @@ def process_event_page(driver, link, page):
                 training,
                 sold_out,
                 kids,
-                link,
-                link,
+                event_link,
+                event_link,
                 description,
             )
             records.append(record)
-            logging.info(f"Successfully scraped {link}\n{json.dumps(record, indent=4)}")
+            logging.info(f"Successfully scraped {event_link}\n{json.dumps(record, indent=4)}")
 
+    except (FreskDateBadFormat, FreskError) as e:
+        # Known business logic exceptions that should skip this event
+        logging.info(f"Skipping event {link}: {e}")
+        return records
     except Exception as e:
         logging.error(f"Unexpected error processing event page {link}: {e}", exc_info=True)
+        raise
 
     return records
