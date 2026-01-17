@@ -428,6 +428,57 @@ def get_dates(event_time):
             )
             return event_start_datetime, event_end_datetime
 
+        # ===================
+        # Eventbrite collection modal - mixed French/English format
+
+        # janv. 24 de 2pm à 5:30pm UTC+1
+        # févr. 15 de 9am à 12:30pm UTC+1
+        elif match := re.match(
+            rf"(?P<month>{'|'.join(FRENCH_SHORT_MONTHS.keys())})\.?\s"
+            r"(?P<day>\d{1,2})\s"
+            r"de\s"
+            r"(?P<start_hour>\d{1,2})(?::(?P<start_minute>\d{2}))?(?P<start_ampm>am|pm)\s"
+            r"à\s"
+            r"(?P<end_hour>\d{1,2})(?::(?P<end_minute>\d{2}))?(?P<end_ampm>am|pm)"
+            r"(\s+UTC(?P<timezone>[+-]?\d+))?",
+            event_time,
+            re.IGNORECASE,
+        ):
+            timezone = match.group("timezone")
+            if timezone and timezone not in ("+1", "+2", "1", "2"):
+                raise FreskDateDifferentTimezone(event_time)
+
+            # Determine year (current year, or next year if the date has passed)
+            current_date = datetime.now()
+            month_num = FRENCH_SHORT_MONTHS[match.group("month").lower()]
+            day = int(match.group("day"))
+
+            year = current_date.year
+            temp_date = datetime(year, month_num, day)
+            if temp_date < current_date:
+                year += 1
+
+            # Parse start time with AM/PM
+            start_hour = int(match.group("start_hour"))
+            start_minute = int(match.group("start_minute") or 0)
+            if match.group("start_ampm").lower() == "pm" and start_hour < 12:
+                start_hour += 12
+            elif match.group("start_ampm").lower() == "am" and start_hour == 12:
+                start_hour = 0
+
+            # Parse end time with AM/PM
+            end_hour = int(match.group("end_hour"))
+            end_minute = int(match.group("end_minute") or 0)
+            if match.group("end_ampm").lower() == "pm" and end_hour < 12:
+                end_hour += 12
+            elif match.group("end_ampm").lower() == "am" and end_hour == 12:
+                end_hour = 0
+
+            event_start_datetime = datetime(year, month_num, day, start_hour, start_minute)
+            event_end_datetime = datetime(year, month_num, day, end_hour, end_minute)
+
+            return event_start_datetime, event_end_datetime
+
         else:
             raise FreskDateBadFormat(event_time)
 
