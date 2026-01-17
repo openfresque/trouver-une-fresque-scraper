@@ -1,5 +1,4 @@
 import numpy as np
-import time
 import json
 import logging
 import re
@@ -22,7 +21,12 @@ from trouver_une_fresque_scraper.utils.language import detect_language_code
 from trouver_une_fresque_scraper.utils.location import get_address
 
 DEFAULT_TIMEOUT = 10000  # milliseconds
-PAGE_LOAD_DELAY = 3
+
+
+def extract_event_uuid(url: str) -> str | None:
+    """Extract the event UUID from an Eventbrite URL."""
+    match = re.search(r"/e/([^/?]+)", url)
+    return match.group(1) if match else None
 
 
 @contextmanager
@@ -149,7 +153,7 @@ def get_eventbrite_data(sources, service=None, options=None):
         headless = "-headless" in options.arguments
 
     with managed_browser(headless=headless) as browser:
-        context = browser.new_context()
+        context = browser.new_context(locale='en-US')
         page = context.new_page()
         records = []
 
@@ -305,6 +309,10 @@ def process_event_page(page: Page, link: str, source: dict):
                 full_location = full_location.replace("\n", ", ")
                 # Remove multiple spaces but keep the commas
                 full_location = " ".join(full_location.split())
+                # Remove empty parts (e.g., ", , " -> ", ")
+                full_location = re.sub(r",\s*,", ",", full_location)
+                # Remove leading/trailing commas and spaces
+                full_location = full_location.strip(", ")
             except Exception:
                 logging.error(f"Location element not found for offline event {link}.")
                 return records
@@ -390,7 +398,10 @@ def process_event_page(page: Page, link: str, source: dict):
                     ################################################################
                     # Parse event id
                     ################################################################
-                    uuid = re.search(r"/e/([^/?]+)", tickets_link).group(1)
+                    uuid = extract_event_uuid(tickets_link)
+                    if not uuid:
+                        logging.warning(f"Could not extract UUID from {tickets_link}")
+                        continue
 
                     # Check for duplicates
                     already_scanned = False
@@ -428,11 +439,10 @@ def process_event_page(page: Page, link: str, source: dict):
                     logging.info("Found EventBrite collection, clicking availability button...")
                     check_availability_btn.click()
 
-                    # Wait for modal to load
+                    # Wait for modal to load using Playwright's native waiting
                     logging.debug("Waiting for modal to load...")
-                    time.sleep(PAGE_LOAD_DELAY)  # Give initial time for modal animation
 
-                    # Check for iframe
+                    # Check for iframe first
                     iframe_locator = page.frame_locator(
                         'iframe[id*="eventbrite-widget"], iframe[class*="modal"], iframe[title*="availability"]'
                     ).first
@@ -448,15 +458,32 @@ def process_event_page(page: Page, link: str, source: dict):
                         modal_page = page
 
                     ################################################################
-                    # Check which type of modal we have
+                    # Wait for modal content to load using Playwright's native waiting
                     ################################################################
+                    MODAL_TIMEOUT = 15000  # 15 seconds total timeout for modal content
 
-                    # Type 1: Simple list with date wrappers
-                    date_wrappers = modal_page.locator('p[class*="dateWrapper"]').all()
-                    # Type 2: Calendar/carousel with clickable date cards
-                    calendar_date_cards = modal_page.locator(
+                    # Create locators for both modal types
+                    date_wrapper_locator = modal_page.locator('p[class*="dateWrapper"]')
+                    calendar_card_locator = modal_page.locator(
                         'div[class*="CompactCalendar"] div[class*="compactChoiceCardContainer"]'
-                    ).all()
+                    )
+
+                    # Wait for either type of content to appear
+                    try:
+                        # Use first() to wait for at least one element of either type
+                        modal_page.locator(
+                            'p[class*="dateWrapper"], '
+                            'div[class*="CompactCalendar"] div[class*="compactChoiceCardContainer"]'
+                        ).first.wait_for(state="visible", timeout=MODAL_TIMEOUT)
+                        logging.debug("Modal content is now visible")
+                    except PlaywrightTimeoutError:
+                        logging.warning(
+                            f"Modal content did not load within {MODAL_TIMEOUT}ms for {link}"
+                        )
+
+                    # Now get all elements
+                    date_wrappers = date_wrapper_locator.all()
+                    calendar_date_cards = calendar_card_locator.all()
 
                     if calendar_date_cards:
                         ################################################################
@@ -503,7 +530,10 @@ def process_event_page(page: Page, link: str, source: dict):
                                     continue
 
                                 # Generate UUID
-                                base_uuid = re.search(r"/e/([^/?]+)", link).group(1)
+                                base_uuid = extract_event_uuid(link)
+                                if not base_uuid:
+                                    logging.warning(f"Could not extract UUID from {link}")
+                                    continue
                                 unique_suffix = hash(date_str) % 10000
                                 uuid = f"{base_uuid}-{unique_suffix}"
 
@@ -558,8 +588,8 @@ def process_event_page(page: Page, link: str, source: dict):
                                         )
                                         continue
 
-                                    # Give extra time for all content to render
-                                    time.sleep(2)
+                                    # Wait for time slot content to stabilize
+                                    page.wait_for_timeout(500)
 
                                 except Exception as e:
                                     logging.debug(f"Could not click date card: {e}")
@@ -622,7 +652,10 @@ def process_event_page(page: Page, link: str, source: dict):
                                             continue
 
                                         # Generate a unique UUID for this specific date/time combo
-                                        base_uuid = re.search(r"/e/([^/?]+)", link).group(1)
+                                        base_uuid = extract_event_uuid(link)
+                                        if not base_uuid:
+                                            logging.warning(f"Could not extract UUID from {link}")
+                                            continue
                                         unique_suffix = hash(combined_text) % 10000
                                         uuid = f"{base_uuid}-{unique_suffix}"
 
@@ -679,7 +712,10 @@ def process_event_page(page: Page, link: str, source: dict):
                 ################################################################
                 # Parse event id
                 ################################################################
-                uuid = re.search(r"/e/([^/?]+)", tickets_link).group(1)
+                uuid = extract_event_uuid(tickets_link)
+                if not uuid:
+                    logging.warning(f"Could not extract UUID from {tickets_link}")
+                    return records
 
                 event_info.append([uuid, event_start_datetime, event_end_datetime, tickets_link])
 
