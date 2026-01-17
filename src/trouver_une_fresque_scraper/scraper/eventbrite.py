@@ -224,25 +224,20 @@ def process_event_page(page: Page, link: str, source: dict):
         ################################################################
         # Has it expired?
         ################################################################
-        expired_badge = page.locator('div[data-testid="enhancedExpiredEventsBadge"]').first
-        try:
-            if expired_badge.is_visible(timeout=1000):
-                # If the element has children, it is enabled
-                children = expired_badge.locator("*").count()
-                if children > 0:
+        expired_selectors = [
+            'div[data-testid="enhancedExpiredEventsBadge"]',
+            "div.enhanced-expired-badge",
+            '[class*="SignalBadge_eventEnded"]',
+        ]
+
+        for selector in expired_selectors:
+            expired_badge = page.locator(selector).first
+            try:
+                if expired_badge.is_visible(timeout=1000):
                     logging.info("Rejecting record: event expired")
                     return records
-        except Exception:
-            pass
-
-        # Check alternative expired badge
-        alt_expired_badge = page.locator("div.enhanced-expired-badge").first
-        try:
-            if alt_expired_badge.is_visible(timeout=1000):
-                logging.info("Rejecting record: event expired")
-                return records
-        except Exception:
-            pass
+            except Exception:
+                continue
 
         ################################################################
         # Is it full?
