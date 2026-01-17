@@ -73,6 +73,30 @@ def run_get_dates_tests():
             datetime(2025, 2, 12, 18, 0),
             datetime(2025, 2, 12, 20, 0),
         ),
+        (
+            "Eventbrite collection modal mixed French/English: afternoon",
+            "janv. 24 de 2pm à 5:30pm UTC+1",
+            datetime(2026, 1, 24, 14, 0),
+            datetime(2026, 1, 24, 17, 30),
+        ),
+        (
+            "Eventbrite collection modal mixed French/English: morning",
+            "févr. 15 de 9am à 12:30pm UTC+1",
+            datetime(2026, 2, 15, 9, 0),
+            datetime(2026, 2, 15, 12, 30),
+        ),
+        (
+            "Eventbrite event-datetime format: evening",
+            "vendredi, févr. 13, 2026 du 7 pm aux 10 pm CET",
+            datetime(2026, 2, 13, 19, 0),
+            datetime(2026, 2, 13, 22, 0),
+        ),
+        (
+            "Eventbrite event-datetime format: morning with minutes",
+            "samedi, janv. 25, 2026 du 9 am aux 12:30 pm CET",
+            datetime(2026, 1, 25, 9, 0),
+            datetime(2026, 1, 25, 12, 30),
+        ),
     ]
     for test_case in test_cases:
         logging.info(f"Running {test_case[0]}")

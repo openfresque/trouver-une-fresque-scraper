@@ -479,6 +479,49 @@ def get_dates(event_time):
 
             return event_start_datetime, event_end_datetime
 
+        # ===================
+        # Eventbrite event-datetime format (French with "du/aux")
+
+        # vendredi, févr. 13, 2026 du 7 pm aux 10 pm CET
+        # samedi, janv. 25, 2026 du 9 am aux 12:30 pm CET
+        elif match := re.match(
+            rf"(?P<day_of_week>{'|'.join(FRENCH_DAYS.keys())}),?\s"
+            rf"(?P<month>{'|'.join(FRENCH_SHORT_MONTHS.keys())})\.?\s"
+            r"(?P<day>\d{1,2}),?\s"
+            r"(?P<year>\d{4})\s"
+            r"du\s"
+            r"(?P<start_hour>\d{1,2})(?::(?P<start_minute>\d{2}))?\s?(?P<start_ampm>am|pm)\s"
+            r"aux\s"
+            r"(?P<end_hour>\d{1,2})(?::(?P<end_minute>\d{2}))?\s?(?P<end_ampm>am|pm)"
+            r"(\s+(?P<timezone>CET|CEST|UTC[+-]?\d*))?",
+            event_time,
+            re.IGNORECASE,
+        ):
+            month_num = FRENCH_SHORT_MONTHS[match.group("month").lower()]
+            day = int(match.group("day"))
+            year = int(match.group("year"))
+
+            # Parse start time with AM/PM
+            start_hour = int(match.group("start_hour"))
+            start_minute = int(match.group("start_minute") or 0)
+            if match.group("start_ampm").lower() == "pm" and start_hour < 12:
+                start_hour += 12
+            elif match.group("start_ampm").lower() == "am" and start_hour == 12:
+                start_hour = 0
+
+            # Parse end time with AM/PM
+            end_hour = int(match.group("end_hour"))
+            end_minute = int(match.group("end_minute") or 0)
+            if match.group("end_ampm").lower() == "pm" and end_hour < 12:
+                end_hour += 12
+            elif match.group("end_ampm").lower() == "am" and end_hour == 12:
+                end_hour = 0
+
+            event_start_datetime = datetime(year, month_num, day, start_hour, start_minute)
+            event_end_datetime = datetime(year, month_num, day, end_hour, end_minute)
+
+            return event_start_datetime, event_end_datetime
+
         else:
             raise FreskDateBadFormat(event_time)
 

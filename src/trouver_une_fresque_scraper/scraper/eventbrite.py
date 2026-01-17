@@ -298,24 +298,35 @@ def process_event_page(page: Page, link: str, source: dict):
         country_code = ""
 
         if not online:
-            full_location_el = page.locator(
-                'div[class^="Location-module__addressWrapper___"]'
-            ).first
-            try:
-                full_location_el.wait_for(state="visible", timeout=DEFAULT_TIMEOUT)
-                # Get inner text which preserves newlines for stacked elements
-                full_location = full_location_el.inner_text()
-                # Replace newlines with commas (stacked elements), then normalize spaces
-                full_location = full_location.replace("\n", ", ")
-                # Remove multiple spaces but keep the commas
-                full_location = " ".join(full_location.split())
-                # Remove empty parts (e.g., ", , " -> ", ")
-                full_location = re.sub(r",\s*,", ",", full_location)
-                # Remove leading/trailing commas and spaces
-                full_location = full_location.strip(", ")
-            except Exception:
+            # Try multiple location selectors (Eventbrite uses different layouts)
+            location_selectors = [
+                'div[class^="Location-module__addressWrapper___"]',
+                'address[class^="Address_address__"]',
+            ]
+
+            full_location = ""
+            for selector in location_selectors:
+                location_el = page.locator(selector).first
+                try:
+                    location_el.wait_for(state="visible", timeout=5000)
+                    # Get inner text which preserves newlines for stacked elements
+                    full_location = location_el.inner_text()
+                    break
+                except Exception:
+                    continue
+
+            if not full_location:
                 logging.error(f"Location element not found for offline event {link}.")
                 return records
+
+            # Replace newlines with commas (stacked elements), then normalize spaces
+            full_location = full_location.replace("\n", ", ")
+            # Remove multiple spaces but keep the commas
+            full_location = " ".join(full_location.split())
+            # Remove empty parts (e.g., ", , " -> ", ")
+            full_location = re.sub(r",\s*,", ",", full_location)
+            # Remove leading/trailing commas and spaces
+            full_location = full_location.strip(", ")
 
             try:
                 address_dict = get_address(full_location)
@@ -336,11 +347,23 @@ def process_event_page(page: Page, link: str, source: dict):
         ################################################################
         # Description
         ################################################################
-        description_el = page.locator("div.event-description").first
-        try:
-            description_el.wait_for(state="visible", timeout=DEFAULT_TIMEOUT)
-            description = description_el.text_content()
-        except Exception:
+        description_selectors = [
+            "div.event-description",
+            'div[class^="Overview_summary__"]',
+        ]
+
+        description = ""
+        for selector in description_selectors:
+            description_el = page.locator(selector).first
+            try:
+                description_el.wait_for(state="visible", timeout=5000)
+                description = description_el.text_content()
+                if description:
+                    break
+            except Exception:
+                continue
+
+        if not description:
             logging.info("Rejecting record: Description not found.")
             return records
 
@@ -354,370 +377,318 @@ def process_event_page(page: Page, link: str, source: dict):
         ################################################################
         kids = False
 
-        ################################################################
-        # Multiple events
-        ################################################################
         event_info = []
 
-        # Try to find multiple date selector (obsolete carousel)
-        date_time_div = page.locator("div.select-date-and-time").first
+        ################################################################
+        # Single event with multiple dates (a "collection").
+        ################################################################
+        check_availability_btn = page.locator("button[id^='check-availability-btn-']").first
+
         try:
-            has_carousel = date_time_div.is_visible(timeout=2000)
+            has_collection_button = check_availability_btn.is_visible(timeout=1000)
         except Exception:
-            has_carousel = False
+            has_collection_button = False
 
-        if has_carousel:
-            # Multiple events on this page (old carousel - likely obsolete)
-            page.evaluate("window.scrollBy(0, 800)")
+        if has_collection_button:
+            # Click the button to open the modal
+            try:
+                logging.info("Found EventBrite collection, clicking availability button...")
+                check_availability_btn.click()
 
-            li_elements = date_time_div.locator("li:not([data-heap-id])").all()
+                # Wait for modal to load using Playwright's native waiting
+                logging.debug("Waiting for modal to load...")
 
-            for li in li_elements:
+                # Check for iframe first
+                iframe_locator = page.frame_locator(
+                    'iframe[id*="eventbrite-widget"], iframe[class*="modal"], iframe[title*="availability"]'
+                ).first
+                modal_page = None
                 try:
-                    li.click()
+                    # Try to access iframe content
+                    test_element = iframe_locator.locator("body").first
+                    test_element.wait_for(state="attached", timeout=2000)
+                    modal_page = iframe_locator
+                    logging.debug("Switching to iframe for modal content...")
+                except Exception:
+                    # No iframe, use main page
+                    modal_page = page
 
-                    ################################################################
-                    # Dates
-                    ################################################################
-                    date_info_el = page.locator("time.start-date-and-location__date").first
-                    date_info_el.wait_for(state="visible", timeout=DEFAULT_TIMEOUT)
+                ################################################################
+                # Wait for modal content to load using Playwright's native waiting
+                ################################################################
+                MODAL_TIMEOUT = 15000  # 15 seconds total timeout for modal content
 
-                    try:
-                        # Extract text content for parsing
-                        date_text = date_info_el.text_content()
-                        event_start_datetime, event_end_datetime = get_dates(date_text)
-                    except FreskDateBadFormat as error:
-                        logging.info(f"Reject record: {error}")
-                        continue
+                # Create locators for both modal types
+                date_wrapper_locator = modal_page.locator('p[class*="dateWrapper"]')
+                calendar_card_locator = modal_page.locator(
+                    'div[class*="CompactCalendar"] div[class*="compactChoiceCardContainer"]'
+                )
 
-                    ################################################################
-                    # Parse tickets link
-                    ################################################################
-                    tickets_link = page.url
+                # Wait for either type of content to appear
+                try:
+                    # Use first() to wait for at least one element of either type
+                    modal_page.locator(
+                        'p[class*="dateWrapper"], '
+                        'div[class*="CompactCalendar"] div[class*="compactChoiceCardContainer"]'
+                    ).first.wait_for(state="visible", timeout=MODAL_TIMEOUT)
+                    logging.debug("Modal content is now visible")
+                except PlaywrightTimeoutError:
+                    logging.warning(
+                        f"Modal content did not load within {MODAL_TIMEOUT}ms for {link}"
+                    )
 
-                    ################################################################
-                    # Parse event id
-                    ################################################################
-                    uuid = extract_event_uuid(tickets_link)
-                    if not uuid:
-                        logging.warning(f"Could not extract UUID from {tickets_link}")
-                        continue
+                # Now get all elements
+                date_wrappers = date_wrapper_locator.all()
+                calendar_date_cards = calendar_card_locator.all()
 
-                    # Check for duplicates
-                    already_scanned = False
-                    for event in event_info:
-                        if uuid in event[0]:
-                            already_scanned = True
+                if calendar_date_cards:
+                    ################################################################
+                    # Handle calendar-style modal (Type 2)
+                    ################################################################
+                    logging.info(
+                        f"Found calendar-style modal with {len(calendar_date_cards)} date cards"
+                    )
 
-                    if not already_scanned:
-                        event_info.append(
-                            [
-                                uuid,
-                                event_start_datetime,
-                                event_end_datetime,
-                                tickets_link,
-                            ]
-                        )
-                except Exception as e:
-                    logging.warning(f"Failed to process date option: {e}")
-                    continue
+                    # Process each date card in the calendar
+                    for card_index, date_card in enumerate(calendar_date_cards):
+                        try:
+                            # Extract date information from the card
+                            weekday_el = date_card.locator('p[class*="weekday"]').first
+                            day_num_el = date_card.locator('p[class*="dateText"]').first
+                            time_slot_el = date_card.locator('p[class*="timeSlot"]').first
+
+                            weekday = weekday_el.text_content()  # e.g., "SAT"
+                            day_num = day_num_el.text_content()  # e.g., "24"
+                            time_slot = time_slot_el.text_content()  # e.g., "9:00 am"
+
+                            # Get the month from the parent structure
+                            month = "Unknown"
+                            try:
+                                # Try to find month header in the parent structure
+                                month_header = modal_page.locator('p[class*="monthName"]').first
+                                month = month_header.text_content()  # e.g., "January"
+                            except Exception as e:
+                                logging.debug(f"Could not find month header: {e}")
+
+                            logging.debug(
+                                f"Processing calendar date: {weekday}, {month} {day_num} at {time_slot}"
+                            )
+
+                            # Format the date string for parsing
+                            date_str = f"{weekday}, {month} {day_num} {time_slot}"
+
+                            try:
+                                event_start_datetime, event_end_datetime = get_dates(date_str)
+                            except FreskDateBadFormat as error:
+                                logging.warning(
+                                    f"Failed to parse calendar date '{date_str}': {error}"
+                                )
+                                continue
+
+                            # Generate UUID
+                            base_uuid = extract_event_uuid(link)
+                            if not base_uuid:
+                                logging.warning(f"Could not extract UUID from {link}")
+                                continue
+                            unique_suffix = hash(date_str) % 10000
+                            uuid = f"{base_uuid}-{unique_suffix}"
+
+                            event_info.append(
+                                [
+                                    uuid,
+                                    event_start_datetime,
+                                    event_end_datetime,
+                                    link,
+                                ]
+                            )
+                            logging.debug(f"Added calendar event: {uuid}")
+
+                        except Exception as e:
+                            logging.warning(
+                                f"Failed to process calendar date card {card_index + 1}: {e}"
+                            )
+                            continue
+
+                elif date_wrappers:
+                    ################################################################
+                    # Handle simple list modal (Type 1)
+                    ################################################################
+                    logging.info(f"Found {len(date_wrappers)} dates in list-style modal")
+
+                    # Process each date
+                    for date_wrapper in date_wrappers:
+                        try:
+                            date_text = date_wrapper.text_content()
+                            logging.debug(f"Processing date: {date_text}")
+
+                            # Click on the date wrapper's parent card to reveal time slots
+                            try:
+                                clickable_parent = date_wrapper.locator(
+                                    'xpath=ancestor::div[contains(@class, "EventInfoCard")]'
+                                ).first
+                                clickable_parent.click()
+                                logging.debug(f"Clicked on date card for: {date_text}")
+
+                                # Wait for time slots to load
+                                logging.debug("Waiting for time slots to load...")
+                                time_slot_list = modal_page.locator(
+                                    'ul[class*="TimeSlotList"]'
+                                ).first
+                                try:
+                                    time_slot_list.wait_for(
+                                        state="visible", timeout=DEFAULT_TIMEOUT
+                                    )
+                                except Exception:
+                                    logging.warning(
+                                        f"Time slot list did not load for date: {date_text}"
+                                    )
+                                    continue
+
+                                # Wait for time slot content to stabilize
+                                page.wait_for_timeout(500)
+
+                            except Exception as e:
+                                logging.debug(f"Could not click date card: {e}")
+
+                            # Find all time slots
+                            all_time_slot_lists = modal_page.locator(
+                                'ul[class*="TimeSlotList"]'
+                            ).all()
+
+                            if not all_time_slot_lists:
+                                logging.warning(
+                                    f"No time slot lists found for date: {date_text}"
+                                )
+                                continue
+
+                            logging.debug(
+                                f"Found {len(all_time_slot_lists)} time slot lists in modal"
+                            )
+
+                            # Extract time slot data
+                            time_slots_data = []
+                            for time_slot_list in all_time_slot_lists:
+                                time_slot_lis = time_slot_list.locator("li").all()
+                                for time_slot_li in time_slot_lis:
+                                    try:
+                                        time_element = time_slot_li.locator(
+                                            'p[class*="sessionText"]'
+                                        ).first
+                                        time_text = time_element.text_content()
+                                        if time_text:
+                                            time_slots_data.append(time_text)
+                                    except Exception as e:
+                                        logging.debug(f"Could not extract time slot text: {e}")
+                                        continue
+
+                            if not time_slots_data:
+                                logging.warning(f"No time slots found for date: {date_text}")
+                                continue
+
+                            logging.debug(
+                                f"Found {len(time_slots_data)} time slots for date: {date_text}"
+                            )
+
+                            # Process each time slot for this date
+                            for time_text in time_slots_data:
+                                try:
+                                    logging.debug(f"Processing time slot: {time_text}")
+
+                                    # Combine date and time for parsing
+                                    combined_text = f"{date_text} {time_text}"
+
+                                    try:
+                                        event_start_datetime, event_end_datetime = get_dates(
+                                            combined_text
+                                        )
+                                    except FreskDateBadFormat as error:
+                                        logging.warning(
+                                            f"Failed to parse date '{combined_text}': {error}"
+                                        )
+                                        continue
+
+                                    # Generate a unique UUID for this specific date/time combo
+                                    base_uuid = extract_event_uuid(link)
+                                    if not base_uuid:
+                                        logging.warning(f"Could not extract UUID from {link}")
+                                        continue
+                                    unique_suffix = hash(combined_text) % 10000
+                                    uuid = f"{base_uuid}-{unique_suffix}"
+
+                                    event_info.append(
+                                        [
+                                            uuid,
+                                            event_start_datetime,
+                                            event_end_datetime,
+                                            link,
+                                        ]
+                                    )
+                                    logging.debug(f"Added event: {uuid}")
+
+                                except Exception as e:
+                                    logging.warning(
+                                        f"Failed to process time slot '{time_text}': {e}"
+                                    )
+                                    continue
+
+                        except Exception as e:
+                            logging.warning(f"Failed to process date wrapper: {e}")
+                            continue
+
+                if not event_info:
+                    logging.error(f"No valid events extracted from collection for {link}.")
+                    return records
+
+            except Exception as e:
+                logging.error(
+                    f"Failed to process EventBrite collection for {link}: {e}", exc_info=True
+                )
+                return records
         else:
-            # Single event on this page
+            # Regular single event
             ################################################################
-            # Single event with multiple dates (a "collection").
+            # Dates
             ################################################################
-            check_availability_btn = page.locator("button[id^='check-availability-btn-']").first
+            date_selectors = [
+                "time.start-date-and-location__date",
+                '[data-testid="event-datetime"]',
+            ]
+
+            date_text = ""
+            for selector in date_selectors:
+                date_info_el = page.locator(selector).first
+                try:
+                    date_info_el.wait_for(state="visible", timeout=5000)
+                    date_text = date_info_el.text_content()
+                    if date_text:
+                        break
+                except Exception:
+                    continue
+
+            if not date_text:
+                logging.info("Rejecting record: Date not found.")
+                return records
 
             try:
-                has_collection_button = check_availability_btn.is_visible(timeout=1000)
-            except Exception:
-                has_collection_button = False
+                event_start_datetime, event_end_datetime = get_dates(date_text)
+            except FreskDateBadFormat as error:
+                logging.info(f"Reject record: {error}")
+                return records
 
-            if has_collection_button:
-                # Click the button to open the modal
-                try:
-                    logging.info("Found EventBrite collection, clicking availability button...")
-                    check_availability_btn.click()
+            ################################################################
+            # Parse tickets link
+            ################################################################
+            tickets_link = page.url
 
-                    # Wait for modal to load using Playwright's native waiting
-                    logging.debug("Waiting for modal to load...")
+            ################################################################
+            # Parse event id
+            ################################################################
+            uuid = extract_event_uuid(tickets_link)
+            if not uuid:
+                logging.warning(f"Could not extract UUID from {tickets_link}")
+                return records
 
-                    # Check for iframe first
-                    iframe_locator = page.frame_locator(
-                        'iframe[id*="eventbrite-widget"], iframe[class*="modal"], iframe[title*="availability"]'
-                    ).first
-                    modal_page = None
-                    try:
-                        # Try to access iframe content
-                        test_element = iframe_locator.locator("body").first
-                        test_element.wait_for(state="attached", timeout=2000)
-                        modal_page = iframe_locator
-                        logging.debug("Switching to iframe for modal content...")
-                    except Exception:
-                        # No iframe, use main page
-                        modal_page = page
-
-                    ################################################################
-                    # Wait for modal content to load using Playwright's native waiting
-                    ################################################################
-                    MODAL_TIMEOUT = 15000  # 15 seconds total timeout for modal content
-
-                    # Create locators for both modal types
-                    date_wrapper_locator = modal_page.locator('p[class*="dateWrapper"]')
-                    calendar_card_locator = modal_page.locator(
-                        'div[class*="CompactCalendar"] div[class*="compactChoiceCardContainer"]'
-                    )
-
-                    # Wait for either type of content to appear
-                    try:
-                        # Use first() to wait for at least one element of either type
-                        modal_page.locator(
-                            'p[class*="dateWrapper"], '
-                            'div[class*="CompactCalendar"] div[class*="compactChoiceCardContainer"]'
-                        ).first.wait_for(state="visible", timeout=MODAL_TIMEOUT)
-                        logging.debug("Modal content is now visible")
-                    except PlaywrightTimeoutError:
-                        logging.warning(
-                            f"Modal content did not load within {MODAL_TIMEOUT}ms for {link}"
-                        )
-
-                    # Now get all elements
-                    date_wrappers = date_wrapper_locator.all()
-                    calendar_date_cards = calendar_card_locator.all()
-
-                    if calendar_date_cards:
-                        ################################################################
-                        # Handle calendar-style modal (Type 2)
-                        ################################################################
-                        logging.info(
-                            f"Found calendar-style modal with {len(calendar_date_cards)} date cards"
-                        )
-
-                        # Process each date card in the calendar
-                        for card_index, date_card in enumerate(calendar_date_cards):
-                            try:
-                                # Extract date information from the card
-                                weekday_el = date_card.locator('p[class*="weekday"]').first
-                                day_num_el = date_card.locator('p[class*="dateText"]').first
-                                time_slot_el = date_card.locator('p[class*="timeSlot"]').first
-
-                                weekday = weekday_el.text_content()  # e.g., "SAT"
-                                day_num = day_num_el.text_content()  # e.g., "24"
-                                time_slot = time_slot_el.text_content()  # e.g., "9:00 am"
-
-                                # Get the month from the parent structure
-                                month = "Unknown"
-                                try:
-                                    # Try to find month header in the parent structure
-                                    month_header = modal_page.locator('p[class*="monthName"]').first
-                                    month = month_header.text_content()  # e.g., "January"
-                                except Exception as e:
-                                    logging.debug(f"Could not find month header: {e}")
-
-                                logging.debug(
-                                    f"Processing calendar date: {weekday}, {month} {day_num} at {time_slot}"
-                                )
-
-                                # Format the date string for parsing
-                                date_str = f"{weekday}, {month} {day_num} {time_slot}"
-
-                                try:
-                                    event_start_datetime, event_end_datetime = get_dates(date_str)
-                                except FreskDateBadFormat as error:
-                                    logging.warning(
-                                        f"Failed to parse calendar date '{date_str}': {error}"
-                                    )
-                                    continue
-
-                                # Generate UUID
-                                base_uuid = extract_event_uuid(link)
-                                if not base_uuid:
-                                    logging.warning(f"Could not extract UUID from {link}")
-                                    continue
-                                unique_suffix = hash(date_str) % 10000
-                                uuid = f"{base_uuid}-{unique_suffix}"
-
-                                event_info.append(
-                                    [
-                                        uuid,
-                                        event_start_datetime,
-                                        event_end_datetime,
-                                        link,
-                                    ]
-                                )
-                                logging.debug(f"Added calendar event: {uuid}")
-
-                            except Exception as e:
-                                logging.warning(
-                                    f"Failed to process calendar date card {card_index + 1}: {e}"
-                                )
-                                continue
-
-                    elif date_wrappers:
-                        ################################################################
-                        # Handle simple list modal (Type 1)
-                        ################################################################
-                        logging.info(f"Found {len(date_wrappers)} dates in list-style modal")
-
-                        # Process each date
-                        for date_wrapper in date_wrappers:
-                            try:
-                                date_text = date_wrapper.text_content()
-                                logging.debug(f"Processing date: {date_text}")
-
-                                # Click on the date wrapper's parent card to reveal time slots
-                                try:
-                                    clickable_parent = date_wrapper.locator(
-                                        'xpath=ancestor::div[contains(@class, "EventInfoCard")]'
-                                    ).first
-                                    clickable_parent.click()
-                                    logging.debug(f"Clicked on date card for: {date_text}")
-
-                                    # Wait for time slots to load
-                                    logging.debug("Waiting for time slots to load...")
-                                    time_slot_list = modal_page.locator(
-                                        'ul[class*="TimeSlotList"]'
-                                    ).first
-                                    try:
-                                        time_slot_list.wait_for(
-                                            state="visible", timeout=DEFAULT_TIMEOUT
-                                        )
-                                    except Exception:
-                                        logging.warning(
-                                            f"Time slot list did not load for date: {date_text}"
-                                        )
-                                        continue
-
-                                    # Wait for time slot content to stabilize
-                                    page.wait_for_timeout(500)
-
-                                except Exception as e:
-                                    logging.debug(f"Could not click date card: {e}")
-
-                                # Find all time slots
-                                all_time_slot_lists = modal_page.locator(
-                                    'ul[class*="TimeSlotList"]'
-                                ).all()
-
-                                if not all_time_slot_lists:
-                                    logging.warning(
-                                        f"No time slot lists found for date: {date_text}"
-                                    )
-                                    continue
-
-                                logging.debug(
-                                    f"Found {len(all_time_slot_lists)} time slot lists in modal"
-                                )
-
-                                # Extract time slot data
-                                time_slots_data = []
-                                for time_slot_list in all_time_slot_lists:
-                                    time_slot_lis = time_slot_list.locator("li").all()
-                                    for time_slot_li in time_slot_lis:
-                                        try:
-                                            time_element = time_slot_li.locator(
-                                                'p[class*="sessionText"]'
-                                            ).first
-                                            time_text = time_element.text_content()
-                                            if time_text:
-                                                time_slots_data.append(time_text)
-                                        except Exception as e:
-                                            logging.debug(f"Could not extract time slot text: {e}")
-                                            continue
-
-                                if not time_slots_data:
-                                    logging.warning(f"No time slots found for date: {date_text}")
-                                    continue
-
-                                logging.debug(
-                                    f"Found {len(time_slots_data)} time slots for date: {date_text}"
-                                )
-
-                                # Process each time slot for this date
-                                for time_text in time_slots_data:
-                                    try:
-                                        logging.debug(f"Processing time slot: {time_text}")
-
-                                        # Combine date and time for parsing
-                                        combined_text = f"{date_text} {time_text}"
-
-                                        try:
-                                            event_start_datetime, event_end_datetime = get_dates(
-                                                combined_text
-                                            )
-                                        except FreskDateBadFormat as error:
-                                            logging.warning(
-                                                f"Failed to parse date '{combined_text}': {error}"
-                                            )
-                                            continue
-
-                                        # Generate a unique UUID for this specific date/time combo
-                                        base_uuid = extract_event_uuid(link)
-                                        if not base_uuid:
-                                            logging.warning(f"Could not extract UUID from {link}")
-                                            continue
-                                        unique_suffix = hash(combined_text) % 10000
-                                        uuid = f"{base_uuid}-{unique_suffix}"
-
-                                        event_info.append(
-                                            [
-                                                uuid,
-                                                event_start_datetime,
-                                                event_end_datetime,
-                                                link,
-                                            ]
-                                        )
-                                        logging.debug(f"Added event: {uuid}")
-
-                                    except Exception as e:
-                                        logging.warning(
-                                            f"Failed to process time slot '{time_text}': {e}"
-                                        )
-                                        continue
-
-                            except Exception as e:
-                                logging.warning(f"Failed to process date wrapper: {e}")
-                                continue
-
-                    if not event_info:
-                        logging.error(f"No valid events extracted from collection for {link}.")
-                        return records
-
-                except Exception as e:
-                    logging.error(
-                        f"Failed to process EventBrite collection for {link}: {e}", exc_info=True
-                    )
-                    return records
-            else:
-                # Regular single event
-                ################################################################
-                # Dates
-                ################################################################
-                date_info_el = page.locator("time.start-date-and-location__date").first
-                date_info_el.wait_for(state="visible", timeout=DEFAULT_TIMEOUT)
-
-                try:
-                    # Extract text content for parsing
-                    date_text = date_info_el.text_content()
-                    event_start_datetime, event_end_datetime = get_dates(date_text)
-                except FreskDateBadFormat as error:
-                    logging.info(f"Reject record: {error}")
-                    return records
-
-                ################################################################
-                # Parse tickets link
-                ################################################################
-                tickets_link = page.url
-
-                ################################################################
-                # Parse event id
-                ################################################################
-                uuid = extract_event_uuid(tickets_link)
-                if not uuid:
-                    logging.warning(f"Could not extract UUID from {tickets_link}")
-                    return records
-
-                event_info.append([uuid, event_start_datetime, event_end_datetime, tickets_link])
+            event_info.append([uuid, event_start_datetime, event_end_datetime, tickets_link])
 
         ################################################################
         # Session loop
