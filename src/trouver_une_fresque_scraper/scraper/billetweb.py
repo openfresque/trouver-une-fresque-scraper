@@ -61,8 +61,14 @@ def get_billetweb_data(sources, service, options):
                 pass  # normal case if description is without more info
 
             try:
-                description = driver.find_element(by=By.CSS_SELECTOR, value="#description").text
-            except Exception:
+                description_el = wait.until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, "#description"))
+                )
+                description = description_el.text
+                if not description:
+                    logging.info("Rejecting record: empty description")
+                    continue
+            except TimeoutException:
                 logging.info("Rejecting record: no description")
                 continue
 
