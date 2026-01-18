@@ -21,6 +21,21 @@ from trouver_une_fresque_scraper.utils.language import detect_language_code
 from trouver_une_fresque_scraper.utils.location import get_address
 
 
+def dismiss_cookie_modal(driver):
+    """Dismiss the Axeptio cookie consent modal if present."""
+    try:
+        reject_button = WebDriverWait(driver, 5).until(
+            EC.element_to_be_clickable((By.ID, "axeptio_btn_dismiss"))
+        )
+        reject_button.click()
+        logging.info("Cookie consent modal dismissed")
+        time.sleep(1)
+    except TimeoutException:
+        logging.debug("Cookie consent modal not found or already dismissed")
+    except Exception as e:
+        logging.debug(f"Cookie consent modal couldn't be handled: {e}")
+
+
 def scroll_to_bottom(driver):
     while True:
         logging.info("Scrolling to the bottom...")
@@ -58,6 +73,9 @@ def get_helloasso_data(sources, service, options):
         driver.get(page["url"])
         driver.implicitly_wait(5)
         time.sleep(3)
+
+        # Dismiss cookie consent modal if present
+        dismiss_cookie_modal(driver)
 
         # Scroll to bottom to load all events
         desired_y = 2300
