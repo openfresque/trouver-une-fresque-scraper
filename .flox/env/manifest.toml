@@ -9,6 +9,9 @@ gcc-unwrapped.pkg-path = "gcc-unwrapped"
 postgresql.pkg-path = "postgresql"
 jq.pkg-path = "jq"
 
+geckodriver.pkg-path = "geckodriver"
+firefox-esr.pkg-path = "firefox-esr"
+
 # Playwright from flake - provides playwright-driver  
 playwright_driver.flake = "github:pietdevries94/playwright-web-flake#playwright-driver"
 nodejs.pkg-path = "nodejs"
@@ -29,6 +32,9 @@ coreutils.pkg-path = "coreutils"
 
 [hook]
 on-activate = '''
+export WEBDRIVER_PATH="$(which geckodriver)"
+export BROWSER_PATH="$(which firefox-esr)"
+
 # Playwright configuration
 export PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=true
 
