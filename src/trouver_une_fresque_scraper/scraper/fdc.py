@@ -1,201 +1,221 @@
 import json
 import re
-import time
 import logging
 
-from selenium import webdriver
-from selenium.common.exceptions import NoSuchElementException, TimeoutException
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError
 
 from trouver_une_fresque_scraper.db.records import get_record_dict
+from trouver_une_fresque_scraper.utils.browser import managed_browser, DEFAULT_TIMEOUT
 from trouver_une_fresque_scraper.utils.date_and_time import get_dates
 from trouver_une_fresque_scraper.utils.errors import (
     FreskError,
     FreskDateBadFormat,
     FreskLanguageNotRecognized,
 )
-from trouver_une_fresque_scraper.utils.keywords import *
+from trouver_une_fresque_scraper.utils.keywords import (
+    is_training,
+    is_sold_out,
+    is_for_kids,
+)
 from trouver_une_fresque_scraper.utils.language import get_language_code
 from trouver_une_fresque_scraper.utils.location import get_address
 
 
-def get_fdc_data(sources, service, options):
+def extract_event_uuid(link: str) -> str | None:
+    """Extract the first UUID from an FDC event URL."""
+    uuid_pattern = r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
+    uuids = re.findall(uuid_pattern, link)
+    return uuids[0] if uuids else None
+
+
+def collect_links_from_iframe(page: Page, source: dict) -> list[str]:
+    """
+    Collect all event links from the listing page, handling pagination.
+
+    Navigates the iframe's pagination to gather links across all pages,
+    without ever leaving the listing page.
+    """
+    all_links = []
+
+    while True:
+        iframe = page.frame_locator("iframe")
+
+        # Wait for iframe content to load
+        try:
+            iframe.locator("a.link-dark").first.wait_for(state="visible", timeout=DEFAULT_TIMEOUT)
+        except PlaywrightTimeoutError:
+            logging.warning(f"No events found in iframe for {source['url']}")
+            break
+
+        link_elements = iframe.locator("a.link-dark").all()
+        for el in link_elements:
+            # Use evaluate to get the resolved absolute URL (get_attribute
+            # returns the raw relative path, which page.goto() can't handle)
+            href = el.evaluate("node => node.href")
+            if href:
+                all_links.append(href)
+
+        logging.info(f"Collected {len(link_elements)} links from current page")
+
+        # Try clicking "Suivant" for pagination
+        try:
+            next_button = iframe.locator("a.page-link:has-text('Suivant')")
+            if next_button.is_visible(timeout=2000):
+                next_button.scroll_into_view_if_needed()
+                page.wait_for_timeout(500)
+                next_button.click()
+                page.wait_for_timeout(5000)
+            else:
+                break
+        except PlaywrightTimeoutError:
+            break
+
+    logging.info(f"Total links collected: {len(all_links)}")
+    return all_links
+
+
+# ==================== Main Entry Point ====================
+
+
+def get_fdc_data(sources, service=None, options=None):
+    """
+    Scrape FDC (Fresque du Climat) events using Playwright.
+
+    Args:
+        sources: List of source page configurations (dicts with 'id' and 'url')
+        service: Unused (kept for compatibility)
+        options: Unused (kept for compatibility)
+
+    Returns:
+        List of event records
+    """
     logging.info("Scraping data from fresqueduclimat.org")
 
-    driver = webdriver.Firefox(service=service, options=options)
+    headless = False
+    if options and hasattr(options, "arguments") and len(options.arguments) > 0:
+        headless = "-headless" in options.arguments
 
-    records = []
+    with managed_browser(headless=headless) as browser:
+        context = browser.new_context()
+        page = context.new_page()
+        records = []
 
-    for page in sources:
-        logging.info("========================")
-        driver.get(page["url"])
-        driver.implicitly_wait(2)
+        for source in sources:
+            try:
+                logging.info(f"========================\nProcessing source {source}")
+                page.goto(source["url"], wait_until="domcontentloaded")
 
-        wait = WebDriverWait(driver, 10)
-        iframe = wait.until(EC.presence_of_element_located((By.TAG_NAME, "iframe")))
-        driver.switch_to.frame(iframe)
+                # Phase 1: Collect all event links across pagination pages
+                links = collect_links_from_iframe(page, source)
 
-        while True:
-            ele = driver.find_elements(By.CSS_SELECTOR, "a.link-dark")
-            links = [e.get_attribute("href") for e in ele]
+                # Phase 2: Process each event page
+                for link in links:
+                    event_record = process_event_page(page, link, source)
+                    if event_record:
+                        records.append(event_record)
 
-            for link in links:
-                logging.info(f"\n-> Processing {link} ...")
-                driver.get(link)
-                driver.implicitly_wait(3)
-
-                ################################################################
-                # Parse event id
-                ################################################################
-                # Define the regex pattern for UUIDs
-                uuid_pattern = (
-                    r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
+            except Exception as e:
+                logging.error(
+                    f"Failed to process source page {source.get('url', source)}: {e}",
+                    exc_info=True,
                 )
-                uuids = re.findall(uuid_pattern, link)
-                if not uuids:
-                    logging.info("Rejecting record: UUID not found")
-                    driver.back()
-                    wait = WebDriverWait(driver, 10)
-                    iframe = wait.until(EC.presence_of_element_located((By.TAG_NAME, "iframe")))
-                    driver.switch_to.frame(iframe)
-                    continue
+                raise
 
-                ################################################################
-                # Parse event title
-                ################################################################
-                title_el = driver.find_element(
-                    by=By.TAG_NAME,
-                    value="h3",
-                )
-                title = title_el.text
+        context.close()
 
-                ################################################################
-                # Parse start and end dates
-                ################################################################
-                clock_icon = driver.find_element(By.CLASS_NAME, "fa-clock")
-                parent_div = clock_icon.find_element(By.XPATH, "..")
-                event_time = parent_div.text
+    return records
 
-                try:
-                    event_start_datetime, event_end_datetime = get_dates(event_time)
-                except FreskDateBadFormat as error:
-                    logging.info(f"Reject record: {error}")
-                    driver.back()
-                    wait = WebDriverWait(driver, 10)
-                    iframe = wait.until(EC.presence_of_element_located((By.TAG_NAME, "iframe")))
-                    driver.switch_to.frame(iframe)
-                    continue
 
-                ################################################################
-                # Workshop language
-                ################################################################
-                language_code = None
-                try:
-                    globe_in_event = driver.find_element(
-                        By.XPATH, '//div[contains(@class, "mb-3")]/i[contains(@class, "fa-globe")]'
-                    )
-                    parent = globe_in_event.find_element(By.XPATH, "..")
-                    language_code = get_language_code(parent.text)
-                except FreskLanguageNotRecognized as e:
-                    logging.warning(f"Unable to parse workshop language: {e}")
-                    language_code = None
-                except NoSuchElementException:
-                    logging.warning("Unable to find workshop language on the page.")
-                    language_code = None
+def process_event_page(page: Page, link: str, source: dict) -> dict | None:
+    """
+    Process a single FDC event page.
 
-                ################################################################
-                # Is it an online event?
-                ################################################################
-                online = True
-                try:
-                    driver.find_element(By.CLASS_NAME, "fa-video")
-                except NoSuchElementException:
-                    online = False
+    Args:
+        page: Playwright Page instance
+        link: URL of the event page
+        source: Source page configuration dict
 
-                ################################################################
-                # Location data
-                ################################################################
-                full_location = ""
-                location_name = ""
-                address = ""
-                city = ""
-                department = ""
-                longitude = ""
-                latitude = ""
-                zip_code = ""
-                country_code = ""
+    Returns:
+        Event record dict, or None if the event should be skipped
+    """
+    logging.info(f"\n-> Processing {link} ...")
 
-                if not online:
-                    pin_icon = driver.find_element(By.CLASS_NAME, "fa-map-pin")
-                    parent_div = pin_icon.find_element(By.XPATH, "..")
-                    full_location = parent_div.text
+    try:
+        page.goto(link, wait_until="domcontentloaded")
 
-                    try:
-                        logging.info(f"Full location: {full_location}")
-                        address_dict = get_address(full_location)
-                        (
-                            location_name,
-                            address,
-                            city,
-                            department,
-                            zip_code,
-                            country_code,
-                            latitude,
-                            longitude,
-                        ) = address_dict.values()
-                    except FreskError as error:
-                        logging.info(f"Rejecting record: {error}.")
-                        driver.back()
-                        wait = WebDriverWait(driver, 10)
-                        iframe = wait.until(EC.presence_of_element_located((By.TAG_NAME, "iframe")))
-                        driver.switch_to.frame(iframe)
-                        continue
+        ################################################################
+        # Parse event id
+        ################################################################
+        uuid = extract_event_uuid(link)
+        if not uuid:
+            logging.info("Rejecting record: UUID not found")
+            return None
 
-                ################################################################
-                # Description
-                ################################################################
-                description_title_el = driver.find_element(
-                    By.XPATH, "//strong[text()='Description']"
-                )
-                parent_description_el = description_title_el.find_element(By.XPATH, "..")
-                description = parent_description_el.text
+        ################################################################
+        # Parse event title
+        ################################################################
+        title_el = page.locator("h3").first
+        title_el.wait_for(state="visible", timeout=DEFAULT_TIMEOUT)
+        title = title_el.inner_text()
 
-                ################################################################
-                # Training?
-                ################################################################
-                training = is_training(title)
+        ################################################################
+        # Parse start and end dates
+        ################################################################
+        clock_icon = page.locator(".fa-clock").first
+        clock_icon.wait_for(state="visible", timeout=DEFAULT_TIMEOUT)
+        parent_div = clock_icon.locator("xpath=..")
+        event_time = parent_div.inner_text().strip()
 
-                ################################################################
-                # Is it full?
-                ################################################################
-                user_icon = driver.find_element(By.CLASS_NAME, "fa-user")
-                parent_container = user_icon.find_element(By.XPATH, "../..")
-                sold_out = is_sold_out(parent_container.text)
+        try:
+            event_start_datetime, event_end_datetime = get_dates(event_time)
+        except FreskDateBadFormat as error:
+            logging.info(f"Reject record: {error}")
+            return None
 
-                ################################################################
-                # Is it suited for kids?
-                ################################################################
-                kids = is_for_kids(description) and not training
+        ################################################################
+        # Workshop language
+        ################################################################
+        language_code = None
+        try:
+            globe_icon = page.locator("div.mb-3 > i.fa-globe").first
+            globe_icon.wait_for(state="visible", timeout=2000)
+            parent = globe_icon.locator("xpath=..")
+            language_code = get_language_code(parent.inner_text())
+        except FreskLanguageNotRecognized as e:
+            logging.warning(f"Unable to parse workshop language: {e}")
+            language_code = None
+        except (PlaywrightTimeoutError, Exception):
+            logging.warning("Unable to find workshop language on the page.")
+            language_code = None
 
-                ################################################################
-                # Parse tickets link
-                ################################################################
-                user_icon = driver.find_element(By.CLASS_NAME, "fa-user")
-                parent_link = user_icon.find_element(By.XPATH, "..")
-                tickets_link = parent_link.get_attribute("href")
+        ################################################################
+        # Is it an online event?
+        ################################################################
+        online = page.locator(".fa-video").count() > 0
 
-                ################################################################
-                # Building final object
-                ################################################################
-                record = get_record_dict(
-                    f"{page['id']}-{uuids[0]}",
-                    page["id"],
-                    title,
-                    event_start_datetime,
-                    event_end_datetime,
-                    full_location,
+        ################################################################
+        # Location data
+        ################################################################
+        full_location = ""
+        location_name = ""
+        address = ""
+        city = ""
+        department = ""
+        longitude = ""
+        latitude = ""
+        zip_code = ""
+        country_code = ""
+
+        if not online:
+            pin_icon = page.locator(".fa-map-pin").first
+            pin_icon.wait_for(state="visible", timeout=DEFAULT_TIMEOUT)
+            parent_div = pin_icon.locator("xpath=..")
+            full_location = parent_div.inner_text()
+
+            try:
+                logging.info(f"Full location: {full_location}")
+                address_dict = get_address(full_location)
+                (
                     location_name,
                     address,
                     city,
@@ -204,43 +224,78 @@ def get_fdc_data(sources, service, options):
                     country_code,
                     latitude,
                     longitude,
-                    language_code,
-                    online,
-                    training,
-                    sold_out,
-                    kids,
-                    link,
-                    tickets_link,
-                    description,
-                )
+                ) = address_dict.values()
+            except FreskError as error:
+                logging.info(f"Rejecting record: {error}.")
+                return None
 
-                records.append(record)
-                logging.info(f"Successfully scraped {link}\n{json.dumps(record, indent=4)}")
+        ################################################################
+        # Description
+        ################################################################
+        description_title_el = page.locator("strong:has-text('Description')").first
+        description_title_el.wait_for(state="visible", timeout=DEFAULT_TIMEOUT)
+        parent_description_el = description_title_el.locator("xpath=..")
+        description = parent_description_el.inner_text()
 
-                driver.back()
-                wait = WebDriverWait(driver, 10)
-                iframe = wait.until(EC.presence_of_element_located((By.TAG_NAME, "iframe")))
-                driver.switch_to.frame(iframe)
+        ################################################################
+        # Training?
+        ################################################################
+        training = is_training(title)
 
-            try:
-                driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-                driver.implicitly_wait(2)
-                time.sleep(2)
-                next_button = WebDriverWait(driver, 10).until(
-                    EC.element_to_be_clickable(
-                        (
-                            By.XPATH,
-                            "//a[@class='page-link' and contains(text(), 'Suivant')]",
-                        )
-                    )
-                )
-                next_button.location_once_scrolled_into_view
-                time.sleep(2)
-                next_button.click()
-                time.sleep(10)
-            except TimeoutException:
-                break
+        ################################################################
+        # Is it full?
+        ################################################################
+        user_icon = page.locator(".fa-user").first
+        user_icon.wait_for(state="visible", timeout=DEFAULT_TIMEOUT)
+        parent_container = user_icon.locator("xpath=../..")
+        sold_out = is_sold_out(parent_container.inner_text())
 
-    driver.quit()
+        ################################################################
+        # Is it suited for kids?
+        ################################################################
+        kids = is_for_kids(description) and not training
 
-    return records
+        ################################################################
+        # Parse tickets link
+        ################################################################
+        user_icon_link = page.locator(".fa-user").first
+        parent_link = user_icon_link.locator("xpath=..")
+        tickets_link = parent_link.evaluate("node => node.href")
+
+        ################################################################
+        # Building final object
+        ################################################################
+        record = get_record_dict(
+            f"{source['id']}-{uuid}",
+            source["id"],
+            title,
+            event_start_datetime,
+            event_end_datetime,
+            full_location,
+            location_name,
+            address,
+            city,
+            department,
+            zip_code,
+            country_code,
+            latitude,
+            longitude,
+            language_code,
+            online,
+            training,
+            sold_out,
+            kids,
+            link,
+            tickets_link,
+            description,
+        )
+
+        logging.info(f"Successfully scraped {link}\n{json.dumps(record, indent=4)}")
+        return record
+
+    except (FreskDateBadFormat, FreskError) as e:
+        logging.info(f"Skipping event {link}: {e}")
+        return None
+    except Exception as e:
+        logging.error(f"Unexpected error processing event page {link}: {e}", exc_info=True)
+        raise
