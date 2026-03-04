@@ -2,9 +2,8 @@ import numpy as np
 import json
 import logging
 import re
-from contextlib import contextmanager
 
-from playwright.sync_api import sync_playwright, Page, TimeoutError as PlaywrightTimeoutError
+from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError
 
 from trouver_une_fresque_scraper.db.records import get_record_dict
 from trouver_une_fresque_scraper.utils.date_and_time import get_dates
@@ -19,32 +18,13 @@ from trouver_une_fresque_scraper.utils.keywords import (
 )
 from trouver_une_fresque_scraper.utils.language import detect_language_code
 from trouver_une_fresque_scraper.utils.location import get_address
-
-DEFAULT_TIMEOUT = 10000  # milliseconds
+from trouver_une_fresque_scraper.utils.browser import managed_browser, DEFAULT_TIMEOUT
 
 
 def extract_event_uuid(url: str) -> str | None:
     """Extract the event UUID from an Eventbrite URL."""
     match = re.search(r"/e/([^/?]+)", url)
     return match.group(1) if match else None
-
-
-@contextmanager
-def managed_browser(headless=False):
-    """Context manager for Playwright browser."""
-    playwright = None
-    browser = None
-    try:
-        playwright = sync_playwright().start()
-        browser = playwright.chromium.launch(headless=headless)
-        logging.info("Playwright browser initialized successfully")
-        yield browser
-    finally:
-        if browser:
-            browser.close()
-            logging.info("Browser closed successfully")
-        if playwright:
-            playwright.stop()
 
 
 def delete_cookies_overlay(page: Page):
@@ -153,7 +133,7 @@ def get_eventbrite_data(sources, service=None, options=None):
         headless = "-headless" in options.arguments
 
     with managed_browser(headless=headless) as browser:
-        context = browser.new_context(locale='en-US')
+        context = browser.new_context(locale="en-US")
         page = context.new_page()
         records = []
 
@@ -375,17 +355,52 @@ def process_event_page(page: Page, link: str, source: dict):
         event_info = []
 
         ################################################################
+        # Read date text to determine if this is a collection or single event
+        ################################################################
+        date_selectors = [
+            "time.start-date-and-location__date",
+            '[data-testid="event-datetime"]',
+        ]
+
+        date_text = ""
+        for selector in date_selectors:
+            date_info_el = page.locator(selector).first
+            try:
+                date_info_el.wait_for(state="visible", timeout=5000)
+                date_text = date_info_el.text_content()
+                if date_text:
+                    break
+            except Exception:
+                continue
+
+        is_collection = (
+            bool(
+                re.match(
+                    r"(?i)^\s*(multiple dates|plusieurs dates|mehrere termine)\s*$",
+                    date_text,
+                )
+            )
+            if date_text
+            else False
+        )
+
+        ################################################################
         # Single event with multiple dates (a "collection").
         ################################################################
-        check_availability_btn = page.locator("button[id^='check-availability-btn-']").first
+        if is_collection:
+            # Find and click the checkout/availability button to open the modal
+            check_availability_btn = page.locator(
+                "button[id^='check-availability-btn-'], "
+                "button[id^='eventbrite-widget-modal-trigger-'], "
+                'button[data-testid="conversion-bar-checkout-button"]'
+            ).first
 
-        try:
-            has_collection_button = check_availability_btn.is_visible(timeout=1000)
-        except Exception:
-            has_collection_button = False
+            try:
+                check_availability_btn.wait_for(state="visible", timeout=5000)
+            except Exception:
+                logging.error(f"Collection detected but no availability button found for {link}.")
+                return records
 
-        if has_collection_button:
-            # Click the button to open the modal
             try:
                 logging.info("Found EventBrite collection, clicking availability button...")
                 check_availability_btn.click()
@@ -551,9 +566,7 @@ def process_event_page(page: Page, link: str, source: dict):
                             ).all()
 
                             if not all_time_slot_lists:
-                                logging.warning(
-                                    f"No time slot lists found for date: {date_text}"
-                                )
+                                logging.warning(f"No time slot lists found for date: {date_text}")
                                 continue
 
                             logging.debug(
@@ -644,22 +657,6 @@ def process_event_page(page: Page, link: str, source: dict):
             ################################################################
             # Dates
             ################################################################
-            date_selectors = [
-                "time.start-date-and-location__date",
-                '[data-testid="event-datetime"]',
-            ]
-
-            date_text = ""
-            for selector in date_selectors:
-                date_info_el = page.locator(selector).first
-                try:
-                    date_info_el.wait_for(state="visible", timeout=5000)
-                    date_text = date_info_el.text_content()
-                    if date_text:
-                        break
-                except Exception:
-                    continue
-
             if not date_text:
                 logging.info("Rejecting record: Date not found.")
                 return records
