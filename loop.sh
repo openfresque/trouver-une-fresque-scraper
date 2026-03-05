@@ -1,4 +1,6 @@
 #!zsh
+export GEOCODE_CACHE_FILE=".geocode_cache.json"
+
 while true
 do
     python -m trouver_une_fresque_scraper.scrape --skip-dirty-check
@@ -9,3 +11,6 @@ do
         break  # if the command succeeds, exit the loop
     fi
 done
+
+# Clean up the disk cache after a successful run
+rm -f "$GEOCODE_CACHE_FILE"

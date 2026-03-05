@@ -376,7 +376,7 @@ def process_event_page(page: Page, link: str, source: dict):
         is_collection = (
             bool(
                 re.match(
-                    r"(?i)^\s*(multiple dates|plusieurs dates|mehrere termine)\s*$",
+                    r"(?i)^\s*(multiple dates|plusieurs dates|dates multiples|mehrere termine)\s*$",
                     date_text,
                 )
             )

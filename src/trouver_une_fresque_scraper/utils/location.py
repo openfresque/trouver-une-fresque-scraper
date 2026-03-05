@@ -1,12 +1,52 @@
+import atexit
+import json
 import logging
+import os
 import re
 
-from functools import lru_cache
+from geopy.location import Location
 from trouver_une_fresque_scraper.utils.errors import *
 
 from geopy.geocoders import Nominatim
 
 geolocator = Nominatim(user_agent="trouver-une-fresque", timeout=10)
+
+# Disk-backed geocode cache
+_geocode_cache = {}
+_geocode_cache_file = os.environ.get("GEOCODE_CACHE_FILE")
+
+
+def _load_geocode_cache():
+    """Load the geocode cache from disk if GEOCODE_CACHE_FILE is set."""
+    global _geocode_cache
+    if _geocode_cache_file and os.path.exists(_geocode_cache_file):
+        try:
+            with open(_geocode_cache_file, "r", encoding="utf-8") as f:
+                _geocode_cache = json.load(f)
+            logging.info(
+                f"Loaded {len(_geocode_cache)} geocode cache entries from {_geocode_cache_file}"
+            )
+        except (json.JSONDecodeError, OSError) as e:
+            logging.warning(f"Could not load geocode cache: {e}")
+            _geocode_cache = {}
+
+
+def _save_geocode_cache():
+    """Save the geocode cache to disk if GEOCODE_CACHE_FILE is set."""
+    if _geocode_cache_file and _geocode_cache:
+        try:
+            with open(_geocode_cache_file, "w", encoding="utf-8") as f:
+                json.dump(_geocode_cache, f, ensure_ascii=False, indent=2)
+            logging.info(
+                f"Saved {len(_geocode_cache)} geocode cache entries to {_geocode_cache_file}"
+            )
+        except OSError as e:
+            logging.warning(f"Could not save geocode cache: {e}")
+
+
+# Load cache on import and register save on exit
+_load_geocode_cache()
+atexit.register(_save_geocode_cache)
 
 departments = {
     "01": "Ain",
@@ -115,14 +155,27 @@ departments = {
 cache = {}
 
 
-@lru_cache(maxsize=None)
 def geocode_location_string(location_string):
     """
-    Requests Nomatim to geocode an input string. All results are cached and
-    reused thanks to the @lru_cache decorator.
+    Requests Nominatim to geocode an input string. Results are cached in memory
+    and persisted to disk (when GEOCODE_CACHE_FILE is set) so they survive
+    across scraping attempts.
     """
+    location_string = location_string.strip()
+    if location_string in _geocode_cache:
+        raw = _geocode_cache[location_string]
+        if raw is None:
+            return None
+        return Location(
+            address=raw.get("display_name", ""),
+            point=(raw["lat"], raw["lon"]),
+            raw=raw,
+        )
+
     logging.info(f"Calling geocoder: {location_string}")
-    return geolocator.geocode(location_string, addressdetails=True)
+    result = geolocator.geocode(location_string, addressdetails=True)
+    _geocode_cache[location_string] = result.raw if result else None
+    return result
 
 
 def get_address(full_location):
@@ -151,7 +204,11 @@ def get_address(full_location):
 
         address = location.raw["address"]
 
-        if address["country_code"] != "fr" and address["country_code"] != "ch" and address["country_code"] != "gb":
+        if (
+            address["country_code"] != "fr"
+            and address["country_code"] != "ch"
+            and address["country_code"] != "gb"
+        ):
             raise FreskCountryNotSupported(address, full_location)
 
         house_number = ""
@@ -231,4 +288,3 @@ def department_to_num(department):
         if v == department:
             return k
     raise FreskDepartmentNotFound(f"Department number.")
-
