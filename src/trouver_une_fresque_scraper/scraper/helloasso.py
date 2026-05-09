@@ -33,27 +33,6 @@ def dismiss_cookie_modal(page: Page):
         logging.debug(f"Cookie consent modal couldn't be handled: {e}")
 
 
-def scroll_to_bottom(page: Page):
-    """
-    Scroll to bottom of page, clicking 'Load More' buttons.
-
-    Continues scrolling and clicking until no more content can be loaded.
-    """
-    while True:
-        logging.info("Scrolling to the bottom...")
-        try:
-            page.wait_for_timeout(2000)
-
-            next_button = page.locator('button[data-hook="load-more-button"]')
-            next_button.wait_for(state="visible", timeout=10000)
-
-            next_button.scroll_into_view_if_needed()
-            page.wait_for_timeout(2000)
-            next_button.click()
-        except PlaywrightTimeoutError:
-            break
-
-
 def collect_event_links(page: Page) -> list[str]:
     """
     Collect all event links from the organization page.
