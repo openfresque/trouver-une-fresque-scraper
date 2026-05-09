@@ -64,6 +64,31 @@ FRENCH_MONTHS = {
     "décembre": 12,
 }
 
+ENGLISH_DAYS = {
+    "monday": 1,
+    "tuesday": 2,
+    "wednesday": 3,
+    "thursday": 4,
+    "friday": 5,
+    "saturday": 6,
+    "sunday": 7,
+}
+
+ENGLISH_MONTHS = {
+    "january": 1,
+    "february": 2,
+    "march": 3,
+    "april": 4,
+    "may": 5,
+    "june": 6,
+    "july": 7,
+    "august": 8,
+    "september": 9,
+    "october": 10,
+    "november": 11,
+    "december": 12,
+}
+
 
 def get_dates(event_time):
     try:
@@ -264,6 +289,42 @@ def get_dates(event_time):
             date_str = f"{year}-{month_num:02d}-{day:02d}"
             event_start_datetime = parse(f"{date_str} {match.group('start_time')}")
             event_end_datetime = parse(f"{date_str} {match.group('end_time')}")
+
+            return event_start_datetime, event_end_datetime
+
+        # ===================
+        # Eventbrite dot format
+
+        # Tuesday 9 June  •  17:30 - 21
+        elif match := re.match(
+            rf"(?P<day_of_week>{'|'.join(ENGLISH_DAYS.keys())})\s"
+            r"(?P<day>\d{1,2})\s"
+            rf"(?P<month>{'|'.join(ENGLISH_MONTHS.keys())})\s+"
+            r"\S\s+"
+            r"(?P<start_hour>\d{1,2})(:(?P<start_minute>\d{2}))?\s"
+            r"\-\s"
+            r"(?P<end_hour>\d{1,2})(:(?P<end_minute>\d{2}))?",
+            event_time,
+            re.IGNORECASE,
+        ):
+            month_num = ENGLISH_MONTHS.get(match.group("month").lower())
+            day = int(match.group("day"))
+
+            # Assume current year, or next year if month/day are already past.
+            current_date = datetime.now()
+            year = current_date.year
+            temp_date = datetime(year, month_num, day)
+            if temp_date < current_date:
+                year += 1
+
+            # Build date string and parse with times
+            date_str = f"{year}-{month_num:02d}-{day:02d}"
+            start_hour = int(match.group("start_hour"))
+            start_minute = int(match.group("start_minute")) if match.group("start_minute") else 0
+            end_hour = int(match.group("end_hour"))
+            end_minute = int(match.group("end_minute")) if match.group("end_minute") else 0
+            event_start_datetime = parse(f"{date_str} {start_hour:02d}:{start_minute:02d}")
+            event_end_datetime = parse(f"{date_str} {end_hour:02d}:{end_minute:02d}")
 
             return event_start_datetime, event_end_datetime
 

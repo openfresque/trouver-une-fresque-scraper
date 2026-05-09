@@ -128,7 +128,13 @@ def get_ics_data(source):
         ################################################################
         # Override workshop type if specified in the event
         ################################################################
-        workshop_id = get_suffix_from_strings(event.categories, "Workshop ID: ")
+        # Google Calendar concatenates categories with commas when importing
+        # from ICS files, so split again here.
+        categories = set()
+        for category in event.categories:
+            for c in category.split(","):
+                categories.add(c)
+        workshop_id = get_suffix_from_strings(categories, "Workshop ID: ")
         if workshop_id:
             workshop_id = int(workshop_id)
             if workshop_id == 0:
@@ -199,10 +205,12 @@ def get_ics_data(source):
         # Get language from registry, override or language code detection.
         ################################################################
         language_code = source.get(
-            "language_code", get_suffix_from_strings(event.categories, "Language: ")
+            "language_code", get_suffix_from_strings(categories, "Language: ")
         )
         if language_code is None:
             language_code = detect_language_code(title, description)
+        if language_code:
+            language_code = language_code.lower()
 
         ################################################################
         # Building final object

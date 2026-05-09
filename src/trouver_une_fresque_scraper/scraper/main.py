@@ -14,6 +14,7 @@ from trouver_une_fresque_scraper.utils.utils import get_config
 SCRAPER_FNS = {
     "billetweb.fr": get_billetweb_data,
     "climatefresk.org": get_fdc_data,
+    "eventbrite.com": get_eventbrite_data,
     "eventbrite.fr": get_eventbrite_data,
     "fresqueduclimat.org": get_fdc_data,
     "lafresquedeleconomiecirculaire.com": get_fec_data,

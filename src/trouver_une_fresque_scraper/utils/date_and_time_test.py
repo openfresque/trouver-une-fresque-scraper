@@ -76,14 +76,14 @@ def run_get_dates_tests():
         (
             "Eventbrite collection modal mixed French/English: afternoon",
             "janv. 24 de 2pm à 5:30pm UTC+1",
-            datetime(2026, 1, 24, 14, 0),
-            datetime(2026, 1, 24, 17, 30),
+            datetime(2027, 1, 24, 14, 0),
+            datetime(2027, 1, 24, 17, 30),
         ),
         (
             "Eventbrite collection modal mixed French/English: morning",
             "févr. 15 de 9am à 12:30pm UTC+1",
-            datetime(2026, 2, 15, 9, 0),
-            datetime(2026, 2, 15, 12, 30),
+            datetime(2027, 2, 15, 9, 0),
+            datetime(2027, 2, 15, 12, 30),
         ),
         (
             "Eventbrite event-datetime format: evening",
@@ -171,6 +171,20 @@ def run_get_dates_from_element_tests():
             "janv. 21 de 9am à 12:30pm UTC+1",
             datetime(2026, 1, 21, 9, 0),
             datetime(2026, 1, 21, 12, 30),
+        ),
+        (
+            "EventBrite: dot format, start time with no minutes",
+            "2026-06-09",
+            "Thursday 21 May  •  18 - 21:30",
+            datetime(2026, 5, 21, 18, 0),
+            datetime(2026, 5, 21, 21, 30),
+        ),
+        (
+            "EventBrite: dot format, end time with no minutes",
+            "2026-06-09",
+            "Tuesday 9 June  •  17:30 - 21",
+            datetime(2026, 6, 9, 17, 30),
+            datetime(2026, 6, 9, 21, 0),
         ),
     ]
     for test_case in test_cases:

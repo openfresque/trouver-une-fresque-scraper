@@ -126,7 +126,7 @@ def get_eventbrite_data(sources, service=None, options=None):
     Returns:
         List of event records
     """
-    logging.info("Scraping data from eventbrite.fr")
+    logging.info("Scraping data from eventbrite.com or eventbrite.fr")
 
     headless = False
     if options and hasattr(options, "arguments") and len(options.arguments) > 0:
