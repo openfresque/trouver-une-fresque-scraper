@@ -260,6 +260,12 @@
         "id": 705
     },
     {
+        "name": "Fresque du Mouvement",
+        "url": "https://www.helloasso.com/associations/la-fresque-du-mouvement",
+        "type": "scraper",
+        "id": 706
+    },
+    {
         "name": "Fresque du Sol",
         "url": "https://framagenda.org/remote.php/dav/public-calendars/KwNwGA232xD38CnN/?export",
         "type": "api",
