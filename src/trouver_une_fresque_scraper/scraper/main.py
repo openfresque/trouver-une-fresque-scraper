@@ -4,7 +4,7 @@ import pandas as pd
 from trouver_une_fresque_scraper.scraper.fdc import get_fdc_data
 from trouver_une_fresque_scraper.scraper.fec import get_fec_data
 from trouver_une_fresque_scraper.scraper.billetweb import get_billetweb_data
-from trouver_une_fresque_scraper.scraper.eventbrite import get_eventbrite_data
+from trouver_une_fresque_scraper.scraper.eventbrite_new import get_eventbrite_new_data
 from trouver_une_fresque_scraper.scraper.glide import get_glide_data
 from trouver_une_fresque_scraper.scraper.helloasso import get_helloasso_data
 from selenium.webdriver.firefox.options import Options as FirefoxOptions
@@ -14,8 +14,8 @@ from trouver_une_fresque_scraper.utils.utils import get_config
 SCRAPER_FNS = {
     "billetweb.fr": get_billetweb_data,
     "climatefresk.org": get_fdc_data,
-    "eventbrite.com": get_eventbrite_data,
-    "eventbrite.fr": get_eventbrite_data,
+    "eventbrite.com": get_eventbrite_new_data,
+    "eventbrite.fr": get_eventbrite_new_data,
     "fresqueduclimat.org": get_fdc_data,
     "lafresquedeleconomiecirculaire.com": get_fec_data,
     "1erdegre.glide.page": get_glide_data,
