@@ -18,6 +18,7 @@ dependencies = [
     "langdetect",
     "pre-commit",
     "playwright>=1.57.0",
+    "playwright-stealth>=2.0.3",
 ]
 
 [build-system]

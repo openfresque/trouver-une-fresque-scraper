@@ -19,6 +19,43 @@ from trouver_une_fresque_scraper.utils.language import detect_language_code
 from trouver_une_fresque_scraper.utils.location import get_address
 
 
+# Maximum time (ms) to wait for a Cloudflare Turnstile challenge to auto-resolve
+TURNSTILE_WAIT_TIMEOUT = 30000
+
+
+def wait_for_turnstile(page: Page):
+    """Wait for a Cloudflare Turnstile challenge to resolve, if present.
+
+    Turnstile embeds an iframe with src containing "challenges.cloudflare.com".
+    With stealth mode enabled, the challenge often auto-resolves without
+    user interaction. This function detects the iframe and waits for it to
+    disappear (meaning the challenge was passed).
+
+    If the challenge doesn't resolve within TURNSTILE_WAIT_TIMEOUT, a warning
+    is logged but execution continues (the subsequent page element waits
+    will fail with a clearer error if the page is still blocked).
+    """
+    turnstile_iframe = page.locator('iframe[src*="challenges.cloudflare.com"]')
+    try:
+        turnstile_iframe.wait_for(state="visible", timeout=3000)
+    except PlaywrightTimeoutError:
+        # No Turnstile challenge detected, continue normally
+        return
+
+    logging.info("Cloudflare Turnstile challenge detected, waiting for it to resolve...")
+    try:
+        turnstile_iframe.wait_for(state="hidden", timeout=TURNSTILE_WAIT_TIMEOUT)
+        logging.info("Turnstile challenge resolved successfully")
+        # Give the page a moment to load after the challenge
+        page.wait_for_timeout(2000)
+    except PlaywrightTimeoutError:
+        logging.warning(
+            f"Turnstile challenge did not resolve within {TURNSTILE_WAIT_TIMEOUT}ms. "
+            "The page may be blocked. If running in non-headless mode, "
+            "try checking the Turnstile checkbox manually."
+        )
+
+
 def dismiss_cookie_modal(page: Page):
     """Dismiss the Axeptio cookie consent modal if present."""
     try:
@@ -93,6 +130,9 @@ def get_helloasso_data(sources, service=None, options=None):
                 page.goto(source["url"], wait_until="domcontentloaded")
                 page.wait_for_timeout(3000)
 
+                # Handle Cloudflare Turnstile challenge if present
+                wait_for_turnstile(page)
+
                 # Dismiss cookie consent modal if present
                 dismiss_cookie_modal(page)
 
@@ -133,6 +173,9 @@ def process_event_page(page: Page, link: str, source: dict) -> dict | None:
 
     try:
         page.goto(link, wait_until="domcontentloaded")
+
+        # Handle Cloudflare Turnstile challenge if present
+        wait_for_turnstile(page)
 
         ################################################################
         # Parse event id
