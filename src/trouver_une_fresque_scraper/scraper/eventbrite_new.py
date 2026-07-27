@@ -1,6 +1,8 @@
 import json
 import logging
 import re
+import urllib.request
+import urllib.error
 
 from datetime import datetime, timedelta
 
@@ -577,8 +579,12 @@ def extract_series_dates(page: Page, link: str, next_data_ctx: dict | None) -> l
     """
     Extract individual session dates from a series/collection event.
 
-    Opens the checkout/availability modal and parses dates from the
-    calendar or list view.
+    Primary strategy: use the Eventbrite public API
+    ``/api/v3/series/{series_id}/events/`` which returns all child events
+    with structured start/end datetimes.  No browser modal interaction needed.
+
+    Fallback: open the checkout modal and scrape dates from the calendar or
+    list view (legacy approach, kept for resilience).
 
     Args:
         page: Playwright Page instance
@@ -593,6 +599,159 @@ def extract_series_dates(page: Page, link: str, next_data_ctx: dict | None) -> l
     if not base_uuid:
         logging.warning(f"Could not extract UUID from {link}")
         return event_info
+
+    # ------------------------------------------------------------------
+    # Determine the series ID
+    # ------------------------------------------------------------------
+    series_id = None
+    if next_data_ctx:
+        basic_info = next_data_ctx.get("basicInfo", {})
+        series_id = basic_info.get("seriesId") or basic_info.get("id")
+    if not series_id:
+        series_id = base_uuid
+
+    # ------------------------------------------------------------------
+    # Primary: fetch child events from the Eventbrite API
+    # ------------------------------------------------------------------
+    event_info = _fetch_series_events_from_api(series_id, link)
+
+    if event_info:
+        return event_info
+
+    # ------------------------------------------------------------------
+    # Fallback: scrape the checkout modal (legacy approach)
+    # ------------------------------------------------------------------
+    logging.info("API approach failed, falling back to modal scraping...")
+    return _extract_series_dates_from_modal(page, link, base_uuid)
+
+
+def _fetch_series_events_from_api(series_id: str, link: str) -> list:
+    """Fetch child events for a series via the Eventbrite public API.
+
+    Tries both ``.fr`` and ``.com`` domains.  Paginates if necessary.
+
+    Returns:
+        List of [uuid, start_datetime, end_datetime, child_link] lists
+    """
+    event_info = []
+
+    # Determine the domain from the original link
+    domains = []
+    if "eventbrite.fr" in link:
+        domains = ["www.eventbrite.fr", "www.eventbrite.com"]
+    else:
+        domains = ["www.eventbrite.com", "www.eventbrite.fr"]
+
+    for domain in domains:
+        try:
+            event_info = _fetch_all_pages(domain, series_id)
+            if event_info:
+                logging.info(
+                    f"Fetched {len(event_info)} child events from API "
+                    f"({domain}) for series {series_id}"
+                )
+                return event_info
+        except Exception as e:
+            logging.debug(f"API call to {domain} failed: {e}")
+            continue
+
+    logging.warning(f"Could not fetch series events from API for series {series_id}")
+    return event_info
+
+
+def _fetch_all_pages(domain: str, series_id: str) -> list:
+    """Fetch all pages of child events from the series API endpoint."""
+    event_info = []
+    page_number = 1
+
+    while True:
+        url = (
+            f"https://{domain}/api/v3/series/{series_id}/events/"
+            f"?page={page_number}&page_size=50"
+        )
+        logging.debug(f"Fetching series API: {url}")
+
+        req = urllib.request.Request(
+            url,
+            headers={
+                "User-Agent": (
+                    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                    "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                ),
+                "Accept": "application/json",
+            },
+        )
+
+        try:
+            with urllib.request.urlopen(req, timeout=15) as response:
+                data = json.loads(response.read().decode("utf-8"))
+        except (urllib.error.HTTPError, urllib.error.URLError) as e:
+            logging.debug(f"HTTP error fetching {url}: {e}")
+            raise
+
+        events = data.get("events", [])
+        pagination = data.get("pagination", {})
+
+        for ev in events:
+            status = ev.get("status", "")
+            # Skip completed / cancelled / draft events
+            if status not in ("live", "started"):
+                logging.debug(
+                    f"Skipping child event {ev.get('id')} with status '{status}'"
+                )
+                continue
+
+            start_info = ev.get("start", {})
+            end_info = ev.get("end", {})
+            start_local = start_info.get("local")
+            end_local = end_info.get("local")
+
+            if not start_local:
+                logging.debug(f"Skipping child event {ev.get('id')}: no start date")
+                continue
+
+            try:
+                start_dt = parse_iso_datetime(start_local)
+            except (ValueError, TypeError):
+                logging.debug(
+                    f"Skipping child event {ev.get('id')}: "
+                    f"unparseable start date '{start_local}'"
+                )
+                continue
+
+            end_dt = None
+            if end_local:
+                try:
+                    end_dt = parse_iso_datetime(end_local)
+                except (ValueError, TypeError):
+                    pass
+            if not end_dt:
+                end_dt = start_dt + timedelta(hours=DEFAULT_DURATION)
+
+            child_id = ev.get("id", "")
+            child_url = ev.get("url", "")
+            # Use the child event's own ID as uuid (unique per occurrence)
+            uuid = child_id if child_id else f"{series_id}-{hash(start_local) % 10000}"
+            child_link = child_url if child_url else f"https://www.eventbrite.fr/e/{child_id}"
+
+            event_info.append([uuid, start_dt, end_dt, child_link])
+
+        # Handle pagination
+        if pagination.get("has_more_items", False):
+            page_number += 1
+        else:
+            break
+
+    return event_info
+
+
+def _extract_series_dates_from_modal(page: Page, link: str, base_uuid: str) -> list:
+    """Legacy fallback: scrape dates from the checkout modal.
+
+    Opens the checkout/availability modal and parses dates from the
+    calendar or list view.
+    """
+    event_info = []
 
     # Click the checkout/availability button to open the modal
     checkout_button = page.locator(
