@@ -34,39 +34,42 @@ def get_ticketing_url_from_description(description):
     Returns:
         list of tuples: (URL, anchor text if HTML document otherwise same URL)
     """
-    links = []
+    # build a dictionary of url to text
+    # this automatically merges duplicates url
+    links = dict()
 
     try:
         # try as HTML document
         root = ET.fromstring(description)
         for elem in root.findall(".//a[@href]"):
-            links.append((elem.get("href"), elem.text))
+            links[elem.get("href")] = elem.text
     except ET.ParseError:
         # fall back to plain text
         for url in re.findall(REGEX_URL, description):
-            links.append((url, url))
+            links[url] = url
 
-    def should_link_be_kept(link):
-        url = link[0]
+    def should_link_be_kept(pair):
+        url, _ = pair
         for domain in IGNORABLE_DOMAINS:
             if url.startswith(domain):
                 return False
         return True
 
-    links = list(filter(should_link_be_kept, links))
+    links = dict(filter(should_link_be_kept, links.items()))
     if len(links) == 1:
-        return links[0][0]
+        return next(iter(links.keys()))
 
-    def does_text_look_like_registration(link):
-        lower_text = link[1].upper()
+    def does_text_look_like_registration(pair):
+        _, text = pair
+        lower_text = text.lower()
         for text in TICKETING_TEXT:
             if lower_text.find(text) > -1:
                 return True
         return False
 
-    links = list(filter(does_text_look_like_registration, links))
+    links = dict(filter(does_text_look_like_registration, links))
     if len(links) == 1:
-        return links[0][0]
+        return next(iter(links.keys()))
 
     return None
 
