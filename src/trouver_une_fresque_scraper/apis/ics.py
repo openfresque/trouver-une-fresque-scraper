@@ -67,7 +67,7 @@ def get_ticketing_url_from_description(description):
                 return True
         return False
 
-    links = dict(filter(does_text_look_like_registration, links))
+    links = dict(filter(does_text_look_like_registration, links.items()))
     if len(links) == 1:
         return next(iter(links.keys()))
 
