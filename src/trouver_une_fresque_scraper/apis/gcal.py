@@ -47,17 +47,23 @@ def get_gcal_data(source):
         logging.info(f"An error occurred: {e}")
 
     for record in json_records["items"]:
+        print(record)
+        if record["status"] == "cancelled":
+            logging.warning(f"Rejecting record {event_id}: cancelled.")
+            continue
 
         ################################################################
         # Get event metadata
         ################################################################
         event_id = record["iCalUID"]
         title = record["summary"]
-        online = False
         training = False
         sold_out = False
         kids = False
         source_link = record["htmlLink"]
+        if "description" not in record:
+            logging.warning(f"Rejecting record {event_id}: no description extracted.")
+            continue
         description = record["description"]
 
         ################################################################
@@ -80,7 +86,7 @@ def get_gcal_data(source):
             continue
 
         ################################################################
-        # Location data
+        # Location data, or online
         ################################################################
         full_location = ""
         location_name = ""
@@ -91,37 +97,36 @@ def get_gcal_data(source):
         latitude = ""
         zip_code = ""
         country_code = ""
+        online = True
 
-        full_location = record["location"]
-        if not full_location:
-            logging.info("Rejecting record: no location provided")
-            continue
-
-        try:
-            address_dict = get_address(full_location)
-            (
-                location_name,
-                address,
-                city,
-                department,
-                zip_code,
-                country_code,
-                latitude,
-                longitude,
-            ) = address_dict.values()
-        except json.JSONDecodeError:
-            logging.info("Rejecting record: error while parsing API response")
-            continue
-        except FreskError as error:
-            logging.info(f"Rejecting record: {error}.")
-            continue
+        if "location" in record:
+            online = False
+            full_location = record["location"]
+            try:
+                address_dict = get_address(full_location)
+                (
+                    location_name,
+                    address,
+                    city,
+                    department,
+                    zip_code,
+                    country_code,
+                    latitude,
+                    longitude,
+                ) = address_dict.values()
+            except json.JSONDecodeError:
+                logging.info("Rejecting record: error while parsing API response")
+                continue
+            except FreskError as error:
+                logging.info(f"Rejecting record: {error}.")
+                continue
 
         ################################################################
         # Parse tickets link
         ################################################################
         tickets_link = get_ticketing_url_from_description(description)
         if not tickets_link:
-            logging.warning(f"Rejecting record {workshop_id}: no ticket link extracted.")
+            logging.warning(f"Rejecting record {event_id}: no ticket link extracted.")
             continue
 
         ################################################################
