@@ -93,7 +93,8 @@
     },
     {
         "name": "Fresque des Déchets",
-        "url": "https://calendar.google.com/calendar/ical/greendonut.info%40gmail.com/public/basic.ics",
+        "url": "https://www.googleapis.com/calendar/v3/calendars/calendarId/events",
+        "calendarId": "greendonut.info@gmail.com",
         "type": "api",
         "id": 15
     },
@@ -158,7 +159,8 @@
     },
     {
         "name": "Planet C Play Again?",
-        "url": "https://calendar.google.com/calendar/ical/2fe1be9f8d5c073969bccaba14133699b71305877304056bee924ee0ef128977%40group.calendar.google.com/public/basic.ics",
+        "url": "https://www.googleapis.com/calendar/v3/calendars/calendarId/events",
+        "calendarId": "2fe1be9f8d5c073969bccaba14133699b71305877304056bee924ee0ef128977@group.calendar.google.com",
         "type": "api",
         "id": 800
     },
