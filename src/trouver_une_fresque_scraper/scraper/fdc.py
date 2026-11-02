@@ -177,7 +177,7 @@ def process_event_page(page: Page, link: str, source: dict) -> dict | None:
         ################################################################
         language_code = None
         try:
-            globe_icon = page.locator("div.mb-3 > i.fa-globe").first
+            globe_icon = page.locator("div > i.fa-globe").first
             globe_icon.wait_for(state="visible", timeout=2000)
             parent = globe_icon.locator("xpath=..")
             language_code = get_language_code(parent.inner_text())
