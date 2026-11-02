@@ -137,14 +137,17 @@ def get_ics_data(source):
         for category in event.categories:
             for c in category.split(","):
                 categories.add(c)
-        workshop_id = get_suffix_from_strings(categories, "Workshop ID: ")
-        if workshop_id:
-            workshop_id = int(workshop_id)
-            if workshop_id == 0:
-                logging.info(f"Rejecting record: workshop ID unknown.")
-                continue
-        else:
-            workshop_id = source["id"]
+
+        workshop_id = source["id"]
+        workshop_id_str = get_suffix_from_strings(categories, "Workshop ID: ")
+        if workshop_id_str is None:
+            logging.info(f"Rejecting record: Workshop ID category not found.")
+            continue
+        try:
+            workshop_id = int(workshop_id_str)
+        except ValueError:
+            logging.info(f"Rejecting record: Workshop ID '{workshop_id_str}' is not a string.")
+            continue
 
         ################################################################
         # Location data, or online
