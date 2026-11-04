@@ -265,6 +265,12 @@
         "type": "scraper",
         "id": 706
     },
+        "name": "Planet C Play Again?",
+        "url": "https://www.googleapis.com/calendar/v3/calendars/calendarId/events",
+        "calendarId": "2fe1be9f8d5c073969bccaba14133699b71305877304056bee924ee0ef128977@group.calendar.google.com",
+        "type": "api",
+        "id": 800
+    },
     {
         "name": "Fresque du Sol",
         "url": "https://framagenda.org/remote.php/dav/public-calendars/KwNwGA232xD38CnN/?export",
