@@ -1,7 +1,7 @@
 {
   "lockfile-version": 1,
   "manifest": {
-    "version": 1,
+    "schema-version": "1.19.0",
     "install": {
       "chromium": {
         "pkg-path": "chromium",
@@ -24,9 +24,6 @@
       },
       "geckodriver": {
         "pkg-path": "geckodriver"
-      },
-      "gum": {
-        "pkg-path": "gum"
       },
       "jq": {
         "pkg-path": "jq"
@@ -52,13 +49,13 @@
       }
     },
     "hook": {
-      "on-activate": "export WEBDRIVER_PATH=\"$(which geckodriver)\"\nexport BROWSER_PATH=\"$(which firefox-esr)\"\n\n# Playwright configuration\nexport PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=true\n\n# Point to writable cache directory for browsers\nPLAYWRIGHT_BROWSERS_DIR=\"$FLOX_ENV_CACHE/playwright-browsers\"\nmkdir -p \"$PLAYWRIGHT_BROWSERS_DIR\"\nexport PLAYWRIGHT_BROWSERS_PATH=\"$PLAYWRIGHT_BROWSERS_DIR\"\n\n# Flox stuff\nexport FLOX_PYTHON_UV_CACHE_DIR=\"$FLOX_ENV_CACHE/python-uv\"\nmkdir -p \"$FLOX_PYTHON_UV_CACHE_DIR\"\n\nexport FLOX_PYTHON_UV_VENV_PATH=\"$FLOX_PYTHON_UV_CACHE_DIR/venv\"\nexport FLOX_PYTHON_UV_VENV_INTERPRETER=\"$(cat \"$FLOX_PYTHON_UV_CACHE_DIR/venv.interpreter\" 2> /dev/null || echo false )\"\nexport FLOX_PYTHON_UV_INTERPRETER=\"$(realpath $(which python3))\"\n\n# Make sure any tools are not attempting to use the Python interpreter from any\n# existing virtual environment.\nunset VIRTUAL_ENV\n\nexport UV_PROJECT_ENVIRONMENT=\"$FLOX_PYTHON_UV_VENV_PATH\"\n\nfunction indent() {\n  echo -e '{{ Foreground \"#cccccc\" \" │ \"}}' | \\\n    gum format -t template --theme=auto\n}\n\nfunction with_spinner() {\n  if [[ \"$FLOX_ENVS_TESTING\" == \"1\" ]]; then\n    bash -c \"$1\"\n  else\n    echo\n    gum spin \\\n      --show-error \\\n      --spinner line \\\n      --spinner.foreground=\"#cccccc\" \\\n      --title \" >>> $2 ...\" \\\n      --title.foreground=\"#cccccc\" \\\n        -- bash -c \"$1\"\n    echo -en \"\\033[2A\\033[K\"\n  fi\n}\n\nfunction ensure_venv() {\n  uv venv -p \"$FLOX_PYTHON_UV_INTERPRETER\" \"$FLOX_PYTHON_UV_VENV_PATH\"\n  source \"$FLOX_PYTHON_UV_VENV_PATH/bin/activate\"\n}\nexport -f ensure_venv\n\nfunction install_packages() {\n  uv sync\n}\nexport -f install_packages\n\n\n\nindent && echo\nindent && echo\n\nif [ \"$FLOX_PYTHON_UV_VENV_INTERPRETER\" != \"$FLOX_PYTHON_UV_INTERPRETER\" ]; then\n  with_spinner ensure_venv \"Creating virtual environment\"\n  indent && echo -e \"{{ Foreground \\\"#ffffff\\\" \\\"✅ Virtual environment was created.\\\" }}\\n\" \\\n    | gum format -t template\nelse\n  indent && echo -e \"{{ Foreground \\\"#ffffff\\\" \\\"✅ Virtual environment already exists.\\\" }}\\n\" \\\n    | gum format -t template\nfi\n\nindent && echo\n\nif [ -f pyproject.toml ]; then\n  with_spinner install_packages \"Installing Python packages\"\n  indent && echo -e \"{{ Foreground \\\"#ffffff\\\" \\\"✅ Python packages installed.\\\" }}\\n\" \\\n    | gum format -t template\nelse\n  indent && echo -e \"{{ Foreground \\\"#ffffff\\\" \\\"✅ No need to install Python packages.\\\" }}\\n\" \\\n    | gum format -t template\nfi\n\nindent && echo\n\n# NOW fix the Playwright driver after packages are installed\nPLAYWRIGHT_DRIVER_PATH=\"$(find /nix/store -maxdepth 1 -name \"*playwright-driver*\" -type d | head -1)\"\nif [ -d \"$PLAYWRIGHT_DRIVER_PATH\" ]; then\n  # Point Python's playwright driver directory to use the Nix driver\n  PYTHON_PLAYWRIGHT_DRIVER=\"$FLOX_PYTHON_UV_VENV_PATH/lib/python3.13/site-packages/playwright/driver\"\n  if [ -d \"$PYTHON_PLAYWRIGHT_DRIVER\" ]; then\n    # Replace the broken node binary with a wrapper\n    # Playwright calls: node cli.js <args>\n    # We skip the first arg (cli.js path) since we hardcode it\n    NODE_PATH=\"$(readlink -f $(which node))\"\n    rm -f \"$PYTHON_PLAYWRIGHT_DRIVER/node\"\n    cat > \"$PYTHON_PLAYWRIGHT_DRIVER/node\" << WRAPPER\n#!/bin/sh\nshift  # Remove first argument (cli.js path)\nexec \"$NODE_PATH\" \"$PLAYWRIGHT_DRIVER_PATH/package/cli.js\" \"\\$@\"\nWRAPPER\n    chmod +x \"$PYTHON_PLAYWRIGHT_DRIVER/node\"\n    \n    # Link to Nix driver's package\n    rm -rf \"$PYTHON_PLAYWRIGHT_DRIVER/package\"\n    ln -sf \"$PLAYWRIGHT_DRIVER_PATH/package\" \"$PYTHON_PLAYWRIGHT_DRIVER/package\"\n    \n    indent && echo -e \"{{ Foreground \\\"#ffffff\\\" \\\"✅ Playwright driver patched for NixOS.\\\" }}\\n\" \\\n      | gum format -t template\n    \n    # Create Chromium browser wrappers (same approach as playwright-web-flake)\n    indent && echo\n    BROWSERS_JSON=\"$PLAYWRIGHT_DRIVER_PATH/package/browsers.json\"\n    if [ -f \"$BROWSERS_JSON\" ]; then\n      CHROMIUM_REV=$(jq -r '.browsers[] | select(.name == \"chromium\").revision' \"$BROWSERS_JSON\")\n      CHROMIUM_HEADLESS_REV=$(jq -r '.browsers[] | select(.name == \"chromium-headless-shell\").revision' \"$BROWSERS_JSON\")\n      FFMPEG_REV=$(jq -r '.browsers[] | select(.name == \"ffmpeg\").revision' \"$BROWSERS_JSON\")\n      \n      # Use architecture-appropriate directory name\n      [ \"$(uname -m)\" = \"aarch64\" ] && CHROME_DIR=\"chrome-linux\" || CHROME_DIR=\"chrome-linux64\"\n      \n      # Link system Chromium to paths Playwright expects\n      mkdir -p \"$PLAYWRIGHT_BROWSERS_DIR/chromium-$CHROMIUM_REV/$CHROME_DIR\"\n      ln -sf \"$(which chromium)\" \"$PLAYWRIGHT_BROWSERS_DIR/chromium-$CHROMIUM_REV/$CHROME_DIR/chrome\"\n      \n      # Headless shell (Playwright uses underscores in path, not hyphens)\n      mkdir -p \"$PLAYWRIGHT_BROWSERS_DIR/chromium_headless_shell-$CHROMIUM_HEADLESS_REV/$CHROME_DIR\"\n      ln -sf \"$(which chromium)\" \"$PLAYWRIGHT_BROWSERS_DIR/chromium_headless_shell-$CHROMIUM_HEADLESS_REV/$CHROME_DIR/headless_shell\"\n      \n      # Link system ffmpeg\n      mkdir -p \"$PLAYWRIGHT_BROWSERS_DIR/ffmpeg-$FFMPEG_REV\"\n      ln -sf \"$(which ffmpeg)\" \"$PLAYWRIGHT_BROWSERS_DIR/ffmpeg-$FFMPEG_REV/ffmpeg-linux\"\n      \n      indent && echo -e \"{{ Foreground \\\"#ffffff\\\" \\\"✅ Chromium browsers linked.\\\" }}\\n\" \\\n        | gum format -t template\n    fi\n  fi\nfi\n\nindent && echo\n"
+      "on-activate": "export WEBDRIVER_PATH=\"$(command -v geckodriver)\"\nexport BROWSER_PATH=\"$(command -v firefox-esr)\"\n\n# Playwright: browsers live in a writable cache dir (the nix store is read-only).\nexport PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=true\nexport PLAYWRIGHT_BROWSERS_PATH=\"$FLOX_ENV_CACHE/playwright-browsers\"\nmkdir -p \"$PLAYWRIGHT_BROWSERS_PATH\"\n\n# The venv is owned by uv: it creates it when missing and recreates it when the\n# pinned interpreter changes (a nix store path, so it moves on env rebuilds).\nunset VIRTUAL_ENV\nexport UV_PROJECT_ENVIRONMENT=\"$FLOX_ENV_CACHE/python-uv/venv\"\n\n# A venv whose interpreter was garbage-collected from the nix store is\n# unusable, and uv refuses to reuse it; drop it so the sync recreates it.\nif [ -d \"$UV_PROJECT_ENVIRONMENT\" ] && ! \"$UV_PROJECT_ENVIRONMENT/bin/python\" -c \"\" >/dev/null 2>&1; then\n  rm -rf \"$UV_PROJECT_ENVIRONMENT\"\nfi\n\nif [ -f pyproject.toml ]; then\n  if uv sync --quiet --python \"$(realpath \"$(command -v python3)\")\"; then\n    echo \"✅ venv ready: $UV_PROJECT_ENVIRONMENT\"\n  else\n    echo \"❌ uv sync failed — the venv may be incomplete, run 'uv sync' to retry\" >&2\n  fi\nfi\n\n# The node binary bundled with the playwright package doesn't run on NixOS:\n# point its driver at the nix-provided one, and link system chromium/ffmpeg\n# where playwright expects browser builds.\nPLAYWRIGHT_DRIVER_PATH=\"$(find /nix/store -maxdepth 1 -name \"*playwright-driver*\" -type d | head -1)\"\nPYTHON_DRIVER=\"$(ls -d \"$UV_PROJECT_ENVIRONMENT\"/lib/python*/site-packages/playwright/driver 2>/dev/null | head -1)\"\nif [ -n \"$PLAYWRIGHT_DRIVER_PATH\" ] && [ -n \"$PYTHON_DRIVER\" ] && [ -f \"$PLAYWRIGHT_DRIVER_PATH/package/browsers.json\" ]; then\n  cat > \"$PYTHON_DRIVER/node\" << WRAPPER\n#!/bin/sh\n# Playwright calls: node cli.js <args>; cli.js is hardcoded to the nix driver.\nshift\nexec \"$(readlink -f \"$(command -v node)\")\" \"$PLAYWRIGHT_DRIVER_PATH/package/cli.js\" \"\\$@\"\nWRAPPER\n  chmod +x \"$PYTHON_DRIVER/node\"\n  rm -rf \"$PYTHON_DRIVER/package\"\n  ln -sf \"$PLAYWRIGHT_DRIVER_PATH/package\" \"$PYTHON_DRIVER/package\"\n\n  BROWSERS_JSON=\"$PLAYWRIGHT_DRIVER_PATH/package/browsers.json\"\n  CHROMIUM_REV=\"$(jq -r '.browsers[] | select(.name == \"chromium\").revision' \"$BROWSERS_JSON\")\"\n  HEADLESS_REV=\"$(jq -r '.browsers[] | select(.name == \"chromium-headless-shell\").revision' \"$BROWSERS_JSON\")\"\n  FFMPEG_REV=\"$(jq -r '.browsers[] | select(.name == \"ffmpeg\").revision' \"$BROWSERS_JSON\")\"\n  CHROME_DIR=\"chrome-linux64\"\n  [ \"$(uname -m)\" = \"aarch64\" ] && CHROME_DIR=\"chrome-linux\"\n\n  mkdir -p \"$PLAYWRIGHT_BROWSERS_PATH/chromium-$CHROMIUM_REV/$CHROME_DIR\"\n  ln -sf \"$(command -v chromium)\" \"$PLAYWRIGHT_BROWSERS_PATH/chromium-$CHROMIUM_REV/$CHROME_DIR/chrome\"\n  # Headless shell (playwright uses underscores in the path, not hyphens)\n  mkdir -p \"$PLAYWRIGHT_BROWSERS_PATH/chromium_headless_shell-$HEADLESS_REV/$CHROME_DIR\"\n  ln -sf \"$(command -v chromium)\" \"$PLAYWRIGHT_BROWSERS_PATH/chromium_headless_shell-$HEADLESS_REV/$CHROME_DIR/headless_shell\"\n  mkdir -p \"$PLAYWRIGHT_BROWSERS_PATH/ffmpeg-$FFMPEG_REV\"\n  ln -sf \"$(command -v ffmpeg)\" \"$PLAYWRIGHT_BROWSERS_PATH/ffmpeg-$FFMPEG_REV/ffmpeg-linux\"\nfi\n"
     },
     "profile": {
-      "bash": "source \"$FLOX_PYTHON_UV_VENV_PATH/bin/activate\"\n",
-      "zsh": "source \"$FLOX_PYTHON_UV_VENV_PATH/bin/activate\"\n",
-      "fish": "source \"$FLOX_PYTHON_UV_VENV_PATH/bin/activate.fish\"\n",
-      "tcsh": "source \"$FLOX_PYTHON_UV_VENV_PATH/bin/activate.csh\"\n"
+      "bash": "source \"$UV_PROJECT_ENVIRONMENT/bin/activate\"\n",
+      "zsh": "source \"$UV_PROJECT_ENVIRONMENT/bin/activate\"\n",
+      "fish": "source \"$UV_PROJECT_ENVIRONMENT/bin/activate.fish\"\n",
+      "tcsh": "source \"$UV_PROJECT_ENVIRONMENT/bin/activate.csh\"\n"
     },
     "options": {
       "systems": [
@@ -781,126 +778,6 @@
       ],
       "outputs": {
         "out": "/nix/store/07c4v4nri9ahaqbdl2bm8lgx9yb5mi8w-geckodriver-0.36.0"
-      },
-      "system": "x86_64-linux",
-      "group": "toplevel",
-      "priority": 5
-    },
-    {
-      "attr_path": "gum",
-      "broken": false,
-      "derivation": "/nix/store/hn9kd3bg2q4q68x0fqypfsmw64la2yg3-gum-0.16.2.drv",
-      "description": "Tasty Bubble Gum for your shell",
-      "install_id": "gum",
-      "license": "MIT",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=9807714d6944a957c2e036f84b0ff8caf9930bc0",
-      "name": "gum-0.16.2",
-      "pname": "gum",
-      "rev": "9807714d6944a957c2e036f84b0ff8caf9930bc0",
-      "rev_count": 826938,
-      "rev_date": "2025-07-08T14:16:20Z",
-      "scrape_date": "2025-07-10T05:14:31.195432Z",
-      "stabilities": [
-        "staging",
-        "unstable"
-      ],
-      "unfree": false,
-      "version": "0.16.2",
-      "outputs_to_install": [
-        "out"
-      ],
-      "outputs": {
-        "out": "/nix/store/z29nnflmjb1rsg32cqassh7cxc2xsdks-gum-0.16.2"
-      },
-      "system": "aarch64-darwin",
-      "group": "toplevel",
-      "priority": 5
-    },
-    {
-      "attr_path": "gum",
-      "broken": false,
-      "derivation": "/nix/store/aii39ly93bsyramyyldm6cz2hifkflnw-gum-0.16.2.drv",
-      "description": "Tasty Bubble Gum for your shell",
-      "install_id": "gum",
-      "license": "MIT",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=9807714d6944a957c2e036f84b0ff8caf9930bc0",
-      "name": "gum-0.16.2",
-      "pname": "gum",
-      "rev": "9807714d6944a957c2e036f84b0ff8caf9930bc0",
-      "rev_count": 826938,
-      "rev_date": "2025-07-08T14:16:20Z",
-      "scrape_date": "2025-07-10T05:34:52.048586Z",
-      "stabilities": [
-        "staging",
-        "unstable"
-      ],
-      "unfree": false,
-      "version": "0.16.2",
-      "outputs_to_install": [
-        "out"
-      ],
-      "outputs": {
-        "out": "/nix/store/q9247cca68af4xsr5yim98nw91n41ff0-gum-0.16.2"
-      },
-      "system": "aarch64-linux",
-      "group": "toplevel",
-      "priority": 5
-    },
-    {
-      "attr_path": "gum",
-      "broken": false,
-      "derivation": "/nix/store/45b3n0iidbzfrn0s4zkijybkc9qvc3rl-gum-0.16.2.drv",
-      "description": "Tasty Bubble Gum for your shell",
-      "install_id": "gum",
-      "license": "MIT",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=9807714d6944a957c2e036f84b0ff8caf9930bc0",
-      "name": "gum-0.16.2",
-      "pname": "gum",
-      "rev": "9807714d6944a957c2e036f84b0ff8caf9930bc0",
-      "rev_count": 826938,
-      "rev_date": "2025-07-08T14:16:20Z",
-      "scrape_date": "2025-07-10T05:53:49.507746Z",
-      "stabilities": [
-        "staging",
-        "unstable"
-      ],
-      "unfree": false,
-      "version": "0.16.2",
-      "outputs_to_install": [
-        "out"
-      ],
-      "outputs": {
-        "out": "/nix/store/d3va9kzircmn7lb2ik2gc4nd1w17hmp4-gum-0.16.2"
-      },
-      "system": "x86_64-darwin",
-      "group": "toplevel",
-      "priority": 5
-    },
-    {
-      "attr_path": "gum",
-      "broken": false,
-      "derivation": "/nix/store/samij4hy7acsx8yh5v07k9igxw2z2nl6-gum-0.16.2.drv",
-      "description": "Tasty Bubble Gum for your shell",
-      "install_id": "gum",
-      "license": "MIT",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=9807714d6944a957c2e036f84b0ff8caf9930bc0",
-      "name": "gum-0.16.2",
-      "pname": "gum",
-      "rev": "9807714d6944a957c2e036f84b0ff8caf9930bc0",
-      "rev_count": 826938,
-      "rev_date": "2025-07-08T14:16:20Z",
-      "scrape_date": "2025-07-10T06:15:26.641247Z",
-      "stabilities": [
-        "staging",
-        "unstable"
-      ],
-      "unfree": false,
-      "version": "0.16.2",
-      "outputs_to_install": [
-        "out"
-      ],
-      "outputs": {
-        "out": "/nix/store/3kmqn7xy8pch0ivksqgmfz2wzdjhpxzq-gum-0.16.2"
       },
       "system": "x86_64-linux",
       "group": "toplevel",
