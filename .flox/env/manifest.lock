@@ -16,14 +16,8 @@
       "ffmpeg": {
         "pkg-path": "ffmpeg"
       },
-      "firefox-esr": {
-        "pkg-path": "firefox-esr"
-      },
       "gcc-unwrapped": {
         "pkg-path": "gcc-unwrapped"
-      },
-      "geckodriver": {
-        "pkg-path": "geckodriver"
       },
       "jq": {
         "pkg-path": "jq"
@@ -49,7 +43,7 @@
       }
     },
     "hook": {
-      "on-activate": "export WEBDRIVER_PATH=\"$(command -v geckodriver)\"\nexport BROWSER_PATH=\"$(command -v firefox-esr)\"\n\n# Playwright: browsers live in a writable cache dir (the nix store is read-only).\nexport PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=true\nexport PLAYWRIGHT_BROWSERS_PATH=\"$FLOX_ENV_CACHE/playwright-browsers\"\nmkdir -p \"$PLAYWRIGHT_BROWSERS_PATH\"\n\n# The venv is owned by uv: it creates it when missing and recreates it when the\n# pinned interpreter changes (a nix store path, so it moves on env rebuilds).\nunset VIRTUAL_ENV\nexport UV_PROJECT_ENVIRONMENT=\"$FLOX_ENV_CACHE/python-uv/venv\"\n\n# A venv whose interpreter was garbage-collected from the nix store is\n# unusable, and uv refuses to reuse it; drop it so the sync recreates it.\nif [ -d \"$UV_PROJECT_ENVIRONMENT\" ] && ! \"$UV_PROJECT_ENVIRONMENT/bin/python\" -c \"\" >/dev/null 2>&1; then\n  rm -rf \"$UV_PROJECT_ENVIRONMENT\"\nfi\n\nif [ -f pyproject.toml ]; then\n  if uv sync --quiet --python \"$(realpath \"$(command -v python3)\")\"; then\n    echo \"✅ venv ready: $UV_PROJECT_ENVIRONMENT\"\n  else\n    echo \"❌ uv sync failed — the venv may be incomplete, run 'uv sync' to retry\" >&2\n  fi\nfi\n\n# The node binary bundled with the playwright package doesn't run on NixOS:\n# point its driver at the nix-provided one, and link system chromium/ffmpeg\n# where playwright expects browser builds.\nPLAYWRIGHT_DRIVER_PATH=\"$(find /nix/store -maxdepth 1 -name \"*playwright-driver*\" -type d | head -1)\"\nPYTHON_DRIVER=\"$(ls -d \"$UV_PROJECT_ENVIRONMENT\"/lib/python*/site-packages/playwright/driver 2>/dev/null | head -1)\"\nif [ -n \"$PLAYWRIGHT_DRIVER_PATH\" ] && [ -n \"$PYTHON_DRIVER\" ] && [ -f \"$PLAYWRIGHT_DRIVER_PATH/package/browsers.json\" ]; then\n  cat > \"$PYTHON_DRIVER/node\" << WRAPPER\n#!/bin/sh\n# Playwright calls: node cli.js <args>; cli.js is hardcoded to the nix driver.\nshift\nexec \"$(readlink -f \"$(command -v node)\")\" \"$PLAYWRIGHT_DRIVER_PATH/package/cli.js\" \"\\$@\"\nWRAPPER\n  chmod +x \"$PYTHON_DRIVER/node\"\n  rm -rf \"$PYTHON_DRIVER/package\"\n  ln -sf \"$PLAYWRIGHT_DRIVER_PATH/package\" \"$PYTHON_DRIVER/package\"\n\n  BROWSERS_JSON=\"$PLAYWRIGHT_DRIVER_PATH/package/browsers.json\"\n  CHROMIUM_REV=\"$(jq -r '.browsers[] | select(.name == \"chromium\").revision' \"$BROWSERS_JSON\")\"\n  HEADLESS_REV=\"$(jq -r '.browsers[] | select(.name == \"chromium-headless-shell\").revision' \"$BROWSERS_JSON\")\"\n  FFMPEG_REV=\"$(jq -r '.browsers[] | select(.name == \"ffmpeg\").revision' \"$BROWSERS_JSON\")\"\n  CHROME_DIR=\"chrome-linux64\"\n  [ \"$(uname -m)\" = \"aarch64\" ] && CHROME_DIR=\"chrome-linux\"\n\n  mkdir -p \"$PLAYWRIGHT_BROWSERS_PATH/chromium-$CHROMIUM_REV/$CHROME_DIR\"\n  ln -sf \"$(command -v chromium)\" \"$PLAYWRIGHT_BROWSERS_PATH/chromium-$CHROMIUM_REV/$CHROME_DIR/chrome\"\n  # Headless shell (playwright uses underscores in the path, not hyphens)\n  mkdir -p \"$PLAYWRIGHT_BROWSERS_PATH/chromium_headless_shell-$HEADLESS_REV/$CHROME_DIR\"\n  ln -sf \"$(command -v chromium)\" \"$PLAYWRIGHT_BROWSERS_PATH/chromium_headless_shell-$HEADLESS_REV/$CHROME_DIR/headless_shell\"\n  mkdir -p \"$PLAYWRIGHT_BROWSERS_PATH/ffmpeg-$FFMPEG_REV\"\n  ln -sf \"$(command -v ffmpeg)\" \"$PLAYWRIGHT_BROWSERS_PATH/ffmpeg-$FFMPEG_REV/ffmpeg-linux\"\nfi\n"
+      "on-activate": "# Playwright: browsers live in a writable cache dir (the nix store is read-only).\nexport PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=true\nexport PLAYWRIGHT_BROWSERS_PATH=\"$FLOX_ENV_CACHE/playwright-browsers\"\nmkdir -p \"$PLAYWRIGHT_BROWSERS_PATH\"\n\n# The venv is owned by uv: it creates it when missing and recreates it when the\n# pinned interpreter changes (a nix store path, so it moves on env rebuilds).\nunset VIRTUAL_ENV\nexport UV_PROJECT_ENVIRONMENT=\"$FLOX_ENV_CACHE/python-uv/venv\"\n\n# A venv whose interpreter was garbage-collected from the nix store is\n# unusable, and uv refuses to reuse it; drop it so the sync recreates it.\nif [ -d \"$UV_PROJECT_ENVIRONMENT\" ] && ! \"$UV_PROJECT_ENVIRONMENT/bin/python\" -c \"\" >/dev/null 2>&1; then\n  rm -rf \"$UV_PROJECT_ENVIRONMENT\"\nfi\n\nif [ -f pyproject.toml ]; then\n  if uv sync --quiet --python \"$(realpath \"$(command -v python3)\")\"; then\n    echo \"✅ venv ready: $UV_PROJECT_ENVIRONMENT\"\n  else\n    echo \"❌ uv sync failed — the venv may be incomplete, run 'uv sync' to retry\" >&2\n  fi\nfi\n\n# The node binary bundled with the playwright package doesn't run on NixOS:\n# point its driver at the nix-provided one, and link system chromium/ffmpeg\n# where playwright expects browser builds.\nPLAYWRIGHT_DRIVER_PATH=\"$(find /nix/store -maxdepth 1 -name \"*playwright-driver*\" -type d | head -1)\"\nPYTHON_DRIVER=\"$(ls -d \"$UV_PROJECT_ENVIRONMENT\"/lib/python*/site-packages/playwright/driver 2>/dev/null | head -1)\"\nif [ -n \"$PLAYWRIGHT_DRIVER_PATH\" ] && [ -n \"$PYTHON_DRIVER\" ] && [ -f \"$PLAYWRIGHT_DRIVER_PATH/package/browsers.json\" ]; then\n  cat > \"$PYTHON_DRIVER/node\" << WRAPPER\n#!/bin/sh\n# Playwright calls: node cli.js <args>; cli.js is hardcoded to the nix driver.\nshift\nexec \"$(readlink -f \"$(command -v node)\")\" \"$PLAYWRIGHT_DRIVER_PATH/package/cli.js\" \"\\$@\"\nWRAPPER\n  chmod +x \"$PYTHON_DRIVER/node\"\n  rm -rf \"$PYTHON_DRIVER/package\"\n  ln -sf \"$PLAYWRIGHT_DRIVER_PATH/package\" \"$PYTHON_DRIVER/package\"\n\n  BROWSERS_JSON=\"$PLAYWRIGHT_DRIVER_PATH/package/browsers.json\"\n  CHROMIUM_REV=\"$(jq -r '.browsers[] | select(.name == \"chromium\").revision' \"$BROWSERS_JSON\")\"\n  HEADLESS_REV=\"$(jq -r '.browsers[] | select(.name == \"chromium-headless-shell\").revision' \"$BROWSERS_JSON\")\"\n  FFMPEG_REV=\"$(jq -r '.browsers[] | select(.name == \"ffmpeg\").revision' \"$BROWSERS_JSON\")\"\n  CHROME_DIR=\"chrome-linux64\"\n  [ \"$(uname -m)\" = \"aarch64\" ] && CHROME_DIR=\"chrome-linux\"\n\n  mkdir -p \"$PLAYWRIGHT_BROWSERS_PATH/chromium-$CHROMIUM_REV/$CHROME_DIR\"\n  ln -sf \"$(command -v chromium)\" \"$PLAYWRIGHT_BROWSERS_PATH/chromium-$CHROMIUM_REV/$CHROME_DIR/chrome\"\n  # Headless shell (playwright uses underscores in the path, not hyphens)\n  mkdir -p \"$PLAYWRIGHT_BROWSERS_PATH/chromium_headless_shell-$HEADLESS_REV/$CHROME_DIR\"\n  ln -sf \"$(command -v chromium)\" \"$PLAYWRIGHT_BROWSERS_PATH/chromium_headless_shell-$HEADLESS_REV/$CHROME_DIR/headless_shell\"\n  mkdir -p \"$PLAYWRIGHT_BROWSERS_PATH/ffmpeg-$FFMPEG_REV\"\n  ln -sf \"$(command -v ffmpeg)\" \"$PLAYWRIGHT_BROWSERS_PATH/ffmpeg-$FFMPEG_REV/ffmpeg-linux\"\nfi\n"
     },
     "profile": {
       "bash": "source \"$UV_PROJECT_ENVIRONMENT/bin/activate\"\n",
@@ -404,126 +398,6 @@
       "priority": 5
     },
     {
-      "attr_path": "firefox-esr",
-      "broken": false,
-      "derivation": "/nix/store/4rn7wmncla8d7grpfs3n1gw9wbd2l843-firefox-128.12.0esr.drv",
-      "description": "Web browser built from Firefox source tree",
-      "install_id": "firefox-esr",
-      "license": "MPL-2.0",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=9807714d6944a957c2e036f84b0ff8caf9930bc0",
-      "name": "firefox-128.12.0esr",
-      "pname": "firefox-esr",
-      "rev": "9807714d6944a957c2e036f84b0ff8caf9930bc0",
-      "rev_count": 826938,
-      "rev_date": "2025-07-08T14:16:20Z",
-      "scrape_date": "2025-07-10T05:14:30.803814Z",
-      "stabilities": [
-        "staging",
-        "unstable"
-      ],
-      "unfree": false,
-      "version": "128.12.0esr",
-      "outputs_to_install": [
-        "out"
-      ],
-      "outputs": {
-        "out": "/nix/store/caw8qb09lc54niyqf8szgqj1gspcnc81-firefox-128.12.0esr"
-      },
-      "system": "aarch64-darwin",
-      "group": "toplevel",
-      "priority": 5
-    },
-    {
-      "attr_path": "firefox-esr",
-      "broken": false,
-      "derivation": "/nix/store/dc60q2fzvsgsr5iikfhyxhggkbl04rcc-firefox-128.12.0esr.drv",
-      "description": "Web browser built from Firefox source tree",
-      "install_id": "firefox-esr",
-      "license": "MPL-2.0",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=9807714d6944a957c2e036f84b0ff8caf9930bc0",
-      "name": "firefox-128.12.0esr",
-      "pname": "firefox-esr",
-      "rev": "9807714d6944a957c2e036f84b0ff8caf9930bc0",
-      "rev_count": 826938,
-      "rev_date": "2025-07-08T14:16:20Z",
-      "scrape_date": "2025-07-10T05:34:51.100337Z",
-      "stabilities": [
-        "staging",
-        "unstable"
-      ],
-      "unfree": false,
-      "version": "128.12.0esr",
-      "outputs_to_install": [
-        "out"
-      ],
-      "outputs": {
-        "out": "/nix/store/mkh7cqhg9ya5q0bgnjhhy65qrd6qyn61-firefox-128.12.0esr"
-      },
-      "system": "aarch64-linux",
-      "group": "toplevel",
-      "priority": 5
-    },
-    {
-      "attr_path": "firefox-esr",
-      "broken": false,
-      "derivation": "/nix/store/z61fj4az9g8ncm7lvx1s9mskhxrdh4a9-firefox-128.12.0esr.drv",
-      "description": "Web browser built from Firefox source tree",
-      "install_id": "firefox-esr",
-      "license": "MPL-2.0",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=9807714d6944a957c2e036f84b0ff8caf9930bc0",
-      "name": "firefox-128.12.0esr",
-      "pname": "firefox-esr",
-      "rev": "9807714d6944a957c2e036f84b0ff8caf9930bc0",
-      "rev_count": 826938,
-      "rev_date": "2025-07-08T14:16:20Z",
-      "scrape_date": "2025-07-10T05:53:49.076862Z",
-      "stabilities": [
-        "staging",
-        "unstable"
-      ],
-      "unfree": false,
-      "version": "128.12.0esr",
-      "outputs_to_install": [
-        "out"
-      ],
-      "outputs": {
-        "out": "/nix/store/hybszjzgir7mkr462fd0095mn92943bl-firefox-128.12.0esr"
-      },
-      "system": "x86_64-darwin",
-      "group": "toplevel",
-      "priority": 5
-    },
-    {
-      "attr_path": "firefox-esr",
-      "broken": false,
-      "derivation": "/nix/store/l4mnh4wi9n924i3c8v296ygps67k381z-firefox-128.12.0esr.drv",
-      "description": "Web browser built from Firefox source tree",
-      "install_id": "firefox-esr",
-      "license": "MPL-2.0",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=9807714d6944a957c2e036f84b0ff8caf9930bc0",
-      "name": "firefox-128.12.0esr",
-      "pname": "firefox-esr",
-      "rev": "9807714d6944a957c2e036f84b0ff8caf9930bc0",
-      "rev_count": 826938,
-      "rev_date": "2025-07-08T14:16:20Z",
-      "scrape_date": "2025-07-10T06:15:25.562532Z",
-      "stabilities": [
-        "staging",
-        "unstable"
-      ],
-      "unfree": false,
-      "version": "128.12.0esr",
-      "outputs_to_install": [
-        "out"
-      ],
-      "outputs": {
-        "out": "/nix/store/rmnjnqil8lmjw4lpyk3bs52kmqkmk76y-firefox-128.12.0esr"
-      },
-      "system": "x86_64-linux",
-      "group": "toplevel",
-      "priority": 5
-    },
-    {
       "attr_path": "gcc-unwrapped",
       "broken": false,
       "derivation": "/nix/store/j3g0nypb7c707xxmlvhswbsgvlwkzpl1-gcc-14.3.0.drv",
@@ -658,126 +532,6 @@
         "libgcc": "/nix/store/h8x8m2vcaqd13sm794q5l3yrynbf3h0q-gcc-14.3.0-libgcc",
         "man": "/nix/store/54qknaqd8cv162sqqjvq2npgqvaplvlq-gcc-14.3.0-man",
         "out": "/nix/store/sa7j7cddyblhcb3ch3ds10w7nw75yjj1-gcc-14.3.0"
-      },
-      "system": "x86_64-linux",
-      "group": "toplevel",
-      "priority": 5
-    },
-    {
-      "attr_path": "geckodriver",
-      "broken": false,
-      "derivation": "/nix/store/azrci4f4qp2im5zy5v4w5v4yx4pn9b1r-geckodriver-0.36.0.drv",
-      "description": "Proxy for using W3C WebDriver-compatible clients to interact with Gecko-based browsers",
-      "install_id": "geckodriver",
-      "license": "MPL-2.0",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=9807714d6944a957c2e036f84b0ff8caf9930bc0",
-      "name": "geckodriver-0.36.0",
-      "pname": "geckodriver",
-      "rev": "9807714d6944a957c2e036f84b0ff8caf9930bc0",
-      "rev_count": 826938,
-      "rev_date": "2025-07-08T14:16:20Z",
-      "scrape_date": "2025-07-10T05:14:30.920255Z",
-      "stabilities": [
-        "staging",
-        "unstable"
-      ],
-      "unfree": false,
-      "version": "0.36.0",
-      "outputs_to_install": [
-        "out"
-      ],
-      "outputs": {
-        "out": "/nix/store/yvnj8fawaca2cfs3g212f0xxp6j7lknp-geckodriver-0.36.0"
-      },
-      "system": "aarch64-darwin",
-      "group": "toplevel",
-      "priority": 5
-    },
-    {
-      "attr_path": "geckodriver",
-      "broken": false,
-      "derivation": "/nix/store/8prf9b8yknjz8zq4p57zf5521h44ih4b-geckodriver-0.36.0.drv",
-      "description": "Proxy for using W3C WebDriver-compatible clients to interact with Gecko-based browsers",
-      "install_id": "geckodriver",
-      "license": "MPL-2.0",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=9807714d6944a957c2e036f84b0ff8caf9930bc0",
-      "name": "geckodriver-0.36.0",
-      "pname": "geckodriver",
-      "rev": "9807714d6944a957c2e036f84b0ff8caf9930bc0",
-      "rev_count": 826938,
-      "rev_date": "2025-07-08T14:16:20Z",
-      "scrape_date": "2025-07-10T05:34:51.304028Z",
-      "stabilities": [
-        "staging",
-        "unstable"
-      ],
-      "unfree": false,
-      "version": "0.36.0",
-      "outputs_to_install": [
-        "out"
-      ],
-      "outputs": {
-        "out": "/nix/store/qi0jxmklpwfwx0dg76n26j1gzyqdqwac-geckodriver-0.36.0"
-      },
-      "system": "aarch64-linux",
-      "group": "toplevel",
-      "priority": 5
-    },
-    {
-      "attr_path": "geckodriver",
-      "broken": false,
-      "derivation": "/nix/store/qn9i9giw6jzdjq4cy2cbgm7cvwj9gm8s-geckodriver-0.36.0.drv",
-      "description": "Proxy for using W3C WebDriver-compatible clients to interact with Gecko-based browsers",
-      "install_id": "geckodriver",
-      "license": "MPL-2.0",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=9807714d6944a957c2e036f84b0ff8caf9930bc0",
-      "name": "geckodriver-0.36.0",
-      "pname": "geckodriver",
-      "rev": "9807714d6944a957c2e036f84b0ff8caf9930bc0",
-      "rev_count": 826938,
-      "rev_date": "2025-07-08T14:16:20Z",
-      "scrape_date": "2025-07-10T05:53:49.192621Z",
-      "stabilities": [
-        "staging",
-        "unstable"
-      ],
-      "unfree": false,
-      "version": "0.36.0",
-      "outputs_to_install": [
-        "out"
-      ],
-      "outputs": {
-        "out": "/nix/store/gwp3r9fnhp5sg9x33yw5yjkgs8n23sim-geckodriver-0.36.0"
-      },
-      "system": "x86_64-darwin",
-      "group": "toplevel",
-      "priority": 5
-    },
-    {
-      "attr_path": "geckodriver",
-      "broken": false,
-      "derivation": "/nix/store/k2bvhrkx257ki8n4y7784ndyz6zg3kg5-geckodriver-0.36.0.drv",
-      "description": "Proxy for using W3C WebDriver-compatible clients to interact with Gecko-based browsers",
-      "install_id": "geckodriver",
-      "license": "MPL-2.0",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=9807714d6944a957c2e036f84b0ff8caf9930bc0",
-      "name": "geckodriver-0.36.0",
-      "pname": "geckodriver",
-      "rev": "9807714d6944a957c2e036f84b0ff8caf9930bc0",
-      "rev_count": 826938,
-      "rev_date": "2025-07-08T14:16:20Z",
-      "scrape_date": "2025-07-10T06:15:25.792107Z",
-      "stabilities": [
-        "staging",
-        "unstable"
-      ],
-      "unfree": false,
-      "version": "0.36.0",
-      "outputs_to_install": [
-        "out"
-      ],
-      "outputs": {
-        "out": "/nix/store/07c4v4nri9ahaqbdl2bm8lgx9yb5mi8w-geckodriver-0.36.0"
       },
       "system": "x86_64-linux",
       "group": "toplevel",

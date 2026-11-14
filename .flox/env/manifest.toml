@@ -14,9 +14,6 @@ gcc-unwrapped.pkg-path = "gcc-unwrapped"
 postgresql.pkg-path = "postgresql"
 jq.pkg-path = "jq"
 
-geckodriver.pkg-path = "geckodriver"
-firefox-esr.pkg-path = "firefox-esr"
-
 # Playwright from flake - provides playwright-driver  
 playwright_driver.flake = "github:pietdevries94/playwright-web-flake#playwright-driver"
 nodejs.pkg-path = "nodejs"
@@ -34,9 +31,6 @@ coreutils.pkg-path = "coreutils"
 
 [hook]
 on-activate = '''
-export WEBDRIVER_PATH="$(command -v geckodriver)"
-export BROWSER_PATH="$(command -v firefox-esr)"
-
 # Playwright: browsers live in a writable cache dir (the nix store is read-only).
 export PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=true
 export PLAYWRIGHT_BROWSERS_PATH="$FLOX_ENV_CACHE/playwright-browsers"

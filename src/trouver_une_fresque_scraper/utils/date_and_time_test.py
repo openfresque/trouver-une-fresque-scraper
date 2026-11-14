@@ -108,7 +108,7 @@ def run_get_dates_tests():
 
 
 @define
-class MockWebDriverElement:
+class MockElement:
     text: str
     dt: str | None
 
@@ -190,7 +190,7 @@ def run_get_dates_from_element_tests():
     for test_case in test_cases:
         logging.info(f"Running {test_case[0]}")
         actual_start_time, actual_end_time = date_and_time.get_dates_from_element(
-            MockWebDriverElement(dt=test_case[1], text=test_case[2])
+            MockElement(dt=test_case[1], text=test_case[2])
         )
         if actual_start_time != test_case[3]:
             logging.error(f"{test_case[0]}: expected {test_case[3]} but got {actual_start_time}")

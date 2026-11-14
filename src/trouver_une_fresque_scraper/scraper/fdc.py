@@ -77,23 +77,18 @@ def collect_links_from_iframe(page: Page, source: dict) -> list[str]:
 # ==================== Main Entry Point ====================
 
 
-def get_fdc_data(sources, service=None, options=None):
+def get_fdc_data(sources, headless=False):
     """
     Scrape FDC (Fresque du Climat) events using Playwright.
 
     Args:
         sources: List of source page configurations (dicts with 'id' and 'url')
-        service: Unused (kept for compatibility)
-        options: Unused (kept for compatibility)
+        headless: Run the browser in headless mode
 
     Returns:
         List of event records
     """
     logging.info("Scraping data from fresqueduclimat.org")
-
-    headless = False
-    if options and hasattr(options, "arguments") and len(options.arguments) > 0:
-        headless = "-headless" in options.arguments
 
     with managed_browser(headless=headless) as browser:
         context = browser.new_context()

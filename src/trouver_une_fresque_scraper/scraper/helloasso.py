@@ -101,23 +101,18 @@ def collect_event_links(page: Page) -> list[str]:
 # ==================== Main Entry Point ====================
 
 
-def get_helloasso_data(sources, service=None, options=None):
+def get_helloasso_data(sources, headless=False):
     """
     Scrape HelloAsso events using Playwright.
 
     Args:
         sources: List of source page configurations (dicts with 'id' and 'url')
-        service: Unused (kept for compatibility)
-        options: Unused (kept for compatibility)
+        headless: Run the browser in headless mode
 
     Returns:
         List of event records
     """
     logging.info("Scraping data from helloasso.com")
-
-    headless = False
-    if options and hasattr(options, "arguments") and len(options.arguments) > 0:
-        headless = "-headless" in options.arguments
 
     with managed_browser(headless=headless) as browser:
         context = browser.new_context()

@@ -174,23 +174,18 @@ def collect_event_links(page: Page, source: dict) -> list[str]:
 # ==================== Main Entry Point ====================
 
 
-def get_eventbrite_new_data(sources, service=None, options=None):
+def get_eventbrite_new_data(sources, headless=False):
     """
     Scrape Eventbrite events using Playwright (new template).
 
     Args:
         sources: List of source page configurations (dicts with 'id' and 'url')
-        service: Unused (kept for compatibility)
-        options: Unused (kept for compatibility)
+        headless: Run the browser in headless mode
 
     Returns:
         List of event records
     """
     logging.info("Scraping data from eventbrite (new template)")
-
-    headless = False
-    if options and hasattr(options, "arguments") and len(options.arguments) > 0:
-        headless = "-headless" in options.arguments
 
     with managed_browser(headless=headless) as browser:
         context = browser.new_context()
@@ -696,9 +691,7 @@ def _fetch_all_pages(domain: str, series_id: str) -> list:
             status = ev.get("status", "")
             # Skip completed / cancelled / draft events
             if status not in ("live", "started"):
-                logging.debug(
-                    f"Skipping child event {ev.get('id')} with status '{status}'"
-                )
+                logging.debug(f"Skipping child event {ev.get('id')} with status '{status}'")
                 continue
 
             start_info = ev.get("start", {})

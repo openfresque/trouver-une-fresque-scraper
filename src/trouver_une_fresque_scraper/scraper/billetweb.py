@@ -28,23 +28,18 @@ CONTEXT_TITLE_PATTERN = r"\s*((?P<title>.*) : )?(?P<event_time>.*)(\n\s*(?P<full
 # ==================== Main Entry Point ====================
 
 
-def get_billetweb_data(sources, service=None, options=None):
+def get_billetweb_data(sources, headless=False):
     """
     Scrape Billetweb events using Playwright.
 
     Args:
         sources: List of source page configurations (dicts with 'id', 'url' and 'iframe')
-        service: Unused (kept for compatibility)
-        options: Unused (kept for compatibility)
+        headless: Run the browser in headless mode
 
     Returns:
         List of event records
     """
     logging.info("Scraping data from www.billetweb.fr")
-
-    headless = False
-    if options and hasattr(options, "arguments") and len(options.arguments) > 0:
-        headless = "-headless" in options.arguments
 
     with managed_browser(headless=headless) as browser:
         # Billetweb renders the event dates client-side in the navigator

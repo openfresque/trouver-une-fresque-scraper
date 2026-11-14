@@ -16,7 +16,7 @@ Les ateliers actuellement supportés sont listés sur la [feuille de route](WORK
 
 ## 🤖 Développeurs: installation
 
-Le scraping est effectué en utilisant Selenium, qui s'appuie sur geckodriver pour afficher les données à récupérer. Notre outil peut être installé sur un Raspberry Pi sans problème.
+Le scraping est effectué en utilisant Playwright, qui s'appuie sur Chromium pour afficher les données à récupérer. Notre outil peut être installé sur un Raspberry Pi sans problème.
 
 ### Avec `flox` (méthode recommandée)
 
@@ -34,12 +34,10 @@ python -c "import trouver_une_fresque_scraper as m; print(m.__file__)"
 
 Cette méthode d'installation n'est pas recommandée. Préférez l'utilisation de Flox, qui vous facilitera la tâche et garantira d'avoir toutes les dépendances nécessaires pour lancer le scraper.
 
-Téléchargez la version la plus récente de [geckodriver](https://github.com/mozilla/geckodriver/releases), puis extrayez le binaire `geckodriver` dans un dossier `bin/` (ou n'importe où sur votre système).
-
 Les librairies suivantes doivent être installées sur votre système:
 
 ```console
-apt install firefox-esr libpq-dev python3-dev
+apt install libpq-dev python3-dev
 ```
 
 Enfin, suivez les instructions pour installer `uv` [ici](https://docs.astral.sh/uv/getting-started/installation/) et créez un environnement Python:
@@ -60,6 +58,12 @@ Installez le scraper avec:
 uv sync
 ```
 
+Installez ensuite le navigateur Chromium utilisé par Playwright:
+
+```console
+uv run playwright install chromium
+```
+
 Vérifiez que tout fonctionne:
 
 ```console
@@ -76,7 +80,6 @@ Renommez le fichier de configuration `config.json.dist` en `config.json` et rens
 
 ```json
 {
-    "webdriver": "",
     "host" : "",
     "port" : "",
     "user" : "",
@@ -85,9 +88,6 @@ Renommez le fichier de configuration `config.json.dist` en `config.json` et rens
     "timezone": "Europe/Paris"
 }
 ```
-
-Le champ `webdriver` est à renseigner avec le chemin vers le binaire `geckodriver` dans le cas d'une installation sans Flox (= manuelle avec `uv` uniquement) uniquement.
-
 
 ### Lancer le scraping
 

@@ -1,4 +1,3 @@
-import os
 import pandas as pd
 
 from trouver_une_fresque_scraper.scraper.fdc import get_fdc_data
@@ -6,9 +5,6 @@ from trouver_une_fresque_scraper.scraper.billetweb import get_billetweb_data
 from trouver_une_fresque_scraper.scraper.eventbrite_new import get_eventbrite_new_data
 from trouver_une_fresque_scraper.scraper.glide import get_glide_data
 from trouver_une_fresque_scraper.scraper.helloasso import get_helloasso_data
-from selenium.webdriver.firefox.options import Options as FirefoxOptions
-from selenium.webdriver.firefox.service import Service
-from trouver_une_fresque_scraper.utils.utils import get_config
 
 SCRAPER_FNS = {
     "billetweb.fr": get_billetweb_data,
@@ -21,27 +17,8 @@ SCRAPER_FNS = {
 }
 
 
-def get_webdriver_executable():
-    webdriver_path = get_config("webdriver")
-    if not webdriver_path and "WEBDRIVER_PATH" in os.environ:
-        webdriver_path = os.environ["WEBDRIVER_PATH"]
-    return webdriver_path
-
-
 def main(scrapers, headless=False):
     records = []
-
-    # geckodriver
-    service = Service(executable_path=get_webdriver_executable())
-
-    # Firefox
-    options = FirefoxOptions()
-    if "BROWSER_PATH" in os.environ:
-        options.binary_location = os.environ["BROWSER_PATH"]
-    options.set_preference("intl.accept_languages", "en-us")
-
-    if headless:
-        options.add_argument("-headless")
 
     sorted_workshops = {}
 
@@ -55,7 +32,7 @@ def main(scrapers, headless=False):
                 sorted_workshops[fn_value].append(workshop)
 
     for fn_key, sourcev in sorted_workshops.items():
-        records += fn_key(sourcev, service=service, options=options)
+        records += fn_key(sourcev, headless=headless)
 
     return pd.DataFrame(records)
 
