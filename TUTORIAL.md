@@ -7,7 +7,6 @@ Sautez à la section correspondante à la plateforme utilisée pour publier votr
 - [Billetweb.fr](#billetwebfr)
 - [Eventbrite.fr](#eventbritefr)
 - [Fresqueduclimat.org](#fresqueduclimatorg)
-- [Lafresquedeleconomiecirculaire.com](#lafresquedeleconomiecirculairecom)
 - [Glide.page](#glidepage)
 
 Si après 1) avoir vérifié tous les points énoncés, et 2) avoir attendu 4 jours, votre évènement n'apparaît toujours pas sur la plateforme Trouver une Fresque, merci de lire la section [Ouvrir une issue](#ouvrir-une-issue) en bas de cette page.
@@ -49,16 +48,6 @@ Voir le [tutoriel OpenStreetMap](TUTORIAL_OSM.md).
 ### Mon atelier s'adresse aux juniors mais il n'apparait pas comme tel !
 
 Le mot-clé "junior" doit figurer dans la description de l'atelier.
-
-## Lafresquedeleconomiecirculaire.com
-
-### Adresse
-
-Voir le [tutoriel OpenStreetMap](TUTORIAL_OSM.md).
-
-### Different timezone
-
-Les évènements ne se tenant pas en France ne sont pas encore supportés.
 
 ## Glide.page
 

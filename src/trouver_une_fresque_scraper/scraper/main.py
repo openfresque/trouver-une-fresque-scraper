@@ -2,7 +2,6 @@ import os
 import pandas as pd
 
 from trouver_une_fresque_scraper.scraper.fdc import get_fdc_data
-from trouver_une_fresque_scraper.scraper.fec import get_fec_data
 from trouver_une_fresque_scraper.scraper.billetweb import get_billetweb_data
 from trouver_une_fresque_scraper.scraper.eventbrite_new import get_eventbrite_new_data
 from trouver_une_fresque_scraper.scraper.glide import get_glide_data
@@ -17,7 +16,6 @@ SCRAPER_FNS = {
     "eventbrite.com": get_eventbrite_new_data,
     "eventbrite.fr": get_eventbrite_new_data,
     "fresqueduclimat.org": get_fdc_data,
-    "lafresquedeleconomiecirculaire.com": get_fec_data,
     "1erdegre.glide.page": get_glide_data,
     "helloasso.com": get_helloasso_data,
 }
