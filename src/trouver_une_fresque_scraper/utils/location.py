@@ -8,8 +8,22 @@ from geopy.location import Location
 from trouver_une_fresque_scraper.utils.errors import *
 
 from geopy.geocoders import Nominatim
+from geopy.extra.rate_limiter import RateLimiter
 
 geolocator = Nominatim(user_agent="trouver-une-fresque", timeout=10)
+
+# Nominatim's usage policy allows an absolute maximum of 1 request per
+# second: https://operations.osmfoundation.org/policies/nominatim/
+# The limiter also retries 429 responses (5 seconds between attempts,
+# up to max_retries). Exceptions are re-raised once retries are
+# exhausted, so a persistent block aborts the run instead of silently
+# caching a false "not found" entry for the location.
+geocode = RateLimiter(
+    geolocator.geocode,
+    min_delay_seconds=1,
+    max_retries=2,
+    swallow_exceptions=False,
+)
 
 # Disk-backed geocode cache
 _geocode_cache = {}
@@ -173,7 +187,7 @@ def geocode_location_string(location_string):
         )
 
     logging.info(f"Calling geocoder: {location_string}")
-    result = geolocator.geocode(location_string, addressdetails=True)
+    result = geocode(location_string, addressdetails=True)
     _geocode_cache[location_string] = result.raw if result else None
     return result
 
