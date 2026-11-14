@@ -1,6 +1,5 @@
 import json
 import requests
-import time
 import logging
 
 from datetime import datetime
@@ -29,7 +28,6 @@ def get_glorieuses_data(source):
         logging.info(f"An error occurred: {e}")
 
     for json_record in json_records:
-        time.sleep(1.5)
         logging.info("")
 
         ################################################################
